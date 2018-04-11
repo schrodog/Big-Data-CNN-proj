@@ -115,31 +115,21 @@ def cnn_structure(input_x, input_y):
 
 # === MAIN ===
 
-init_op = tf.global_variables_initializer()
-sess = tf.Session()
-sess.run(init_op)
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
 
-coord = tf.train.Coordinator()
-threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-try:
-    while not coord.should_stop():
-        print(sess.run(tf.shape(image_data)))
-except tf.errors.OutOfRangeError:
-    print('Done')
-finally:
-    coord.request_stop()
+    try:
+        while not coord.should_stop():
+            print(sess.run(tf.shape(image_data)))
+    except tf.errors.OutOfRangeError:
+        print('Done')
+    finally:
+        coord.request_stop()
 
-coord.join(threads)
-sess.close()
-
-# sess = tf.InteractiveSession()
-# tf.train.start_queue_runners(sess=sess)
-#
-# print(sess.run(tf.shape(image_data)))
-
-
-
+    coord.join(threads)
 
 
 
