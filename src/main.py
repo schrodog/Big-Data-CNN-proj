@@ -112,6 +112,14 @@ def cnn_structure(input_x, input_y):
     return softmax
 
 
+# loss
+
+def loss(input_x, input_y):
+    with tf.name_scope('loss'):
+        input_y = tf.cast(input_y, tf.int32)
+        cross_entropy = tf.losses.sparse_softmax_cross_entropy(labels=input_y, logits=input_x)
+        mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+
 
 # === MAIN ===
 
