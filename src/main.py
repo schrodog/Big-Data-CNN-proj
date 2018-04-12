@@ -120,6 +120,16 @@ def loss(input_x, input_y):
         cross_entropy = tf.losses.sparse_softmax_cross_entropy(labels=input_y, logits=input_x)
         mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
 
+# train
+def train(loss, learning_rate):
+	global_step = tf.train.get_or_create_global_step()
+	train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
+	return train_op
+	
+# accuracy
+def accuracy(input_x, input_y):
+	accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(input_x, 1), tf.argmax(input_y, 1)), dtype=tf.float32))
+	return accuracy
 
 # === MAIN ===
 
