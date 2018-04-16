@@ -14,9 +14,10 @@ binary format: [1,1024,1024,1024]
 # tf.app.flags.DEFINE_integer('batch_size', 128, "batch size")
 DATA_DIR = os.path.join(os.getcwd(), '..', 'cifar-10-batches-bin')
 
+NUM_EPOCHS = 300
 NUM_CLASS = 10
-NUM_EXAMPLE_TRAIN = 50000
-BATCH_SIZE = 128
+NUM_EXAMPLE_TRAIN = 5000
+BATCH_SIZE = 250
 learning_rate = 0.0001
 keep_prob = tf.placeholder(tf.float32)
 
@@ -53,7 +54,7 @@ def distorted_input(data_dir, batch_size, mode):
 
     filename = ''
     if mode == 'train':
-        filenames = [os.path.join(data_dir, 'data_batch_'+str(i)+'.bin') for i in range(1,5) ]
+        filenames = [os.path.join(data_dir, 'data_batch_'+str(i)+'.bin') for i in range(1,2) ]
     else:
         filenames = [os.path.join(data_dir, 'data_batch_5.bin') ]
 
@@ -61,7 +62,7 @@ def distorted_input(data_dir, batch_size, mode):
         if not tf.gfile.Exists(f):
             raise ValueError('Failed to find file: ' + f)
 
-    file_list = tf.train.string_input_producer(filenames)
+    file_list = tf.train.string_input_producer(filenames, num_epochs=NUM_EPOCHS)
 
     image_data, label  = read_input(file_list)
     
@@ -233,10 +234,6 @@ def model_fn(features,labels, mode):
 
 # === MAIN ===
 
-image_data_train, label_train = distorted_input(DATA_DIR, BATCH_SIZE, 'train')
-losses = model_fn(image_data_train, label_train, 'train')
-image_data_test, label_test = distorted_input(DATA_DIR, BATCH_SIZE, 'test')
-accuracy = model_fn(image_data_test, label_test, 'test')
 
 # losses, train, acc, aa,bb = model_fn(image_data, label, 'train')
 # softmax = cnn_network(image_data, 'train')
@@ -248,9 +245,15 @@ accuracy = model_fn(image_data_test, label_test, 'test')
 
 count = 0
 
+image_data_train, label_train = distorted_input(DATA_DIR, BATCH_SIZE, 'train')
+losses = model_fn(image_data_train, label_train, 'train')
+
+image_data_test, label_test = distorted_input(DATA_DIR, BATCH_SIZE, 'test')
+accuracy = model_fn(image_data_test, label_test, 'test')
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
+    sess.run(tf.local_variables_initializer())
 
     # writer = tf.summary.FileWriter("logs/", sess.graph)
 
