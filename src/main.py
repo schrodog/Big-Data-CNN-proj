@@ -147,6 +147,8 @@ def cnn_network(input_x, mode):
         # reshape = tf.reshape(pool4, [input_x.shape.as_list()[0], -1])
         flat = tf.contrib.layers.flatten(pool4)
 	    #activ4 = tf.nn.relu(tf.matmul(reshape, weight4) + bias4) # choose which activ4?
+        
+        # [b,384]
         fc1 = tf.layers.dense(flat, 384)
         drop5 = tf.nn.dropout(fc1, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
 
@@ -156,7 +158,7 @@ def cnn_network(input_x, mode):
             out = tf.layers.dense(drop5, NUM_CLASS)
         else:
             out = tf.layers.dense(fc1, NUM_CLASS)
-
+        # [b,10]
         softmax = tf.nn.softmax(out)
 
     return softmax
@@ -168,20 +170,21 @@ def loss(input_x, input_y):
     with tf.name_scope('loss'):
         input_y = tf.cast(input_y, tf.int32)
         cross_entropy = tf.losses.sparse_softmax_cross_entropy(labels=input_y, logits=input_x)
-        mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
-    return mean
+        # mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
+    return cross_entropy
 
 # train
 def train(losses, learning_rate):
     global_step = tf.train.get_or_create_global_step()
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(losses, global_step=global_step)
+    
     return train_op
 
 # accuracy
 def accuracy(input_x, input_y):
-    # input_x = tf.cast(input_x, dtype=tf.int64)
+    input_x = tf.cast(input_x, dtype=tf.int32)
     accuracy = tf.reduce_mean(
-        tf.cast(tf.equal( tf.argmax(input_x, 1) , tf.argmax(input_y, 1) ),
+        tf.cast(tf.equal( input_x , input_y ),
         dtype=tf.float32)
         )
 
@@ -195,12 +198,12 @@ def model_fn(features,labels, mode):
     predict_class = tf.argmax(logits_test, axis=1)
     # predict_prob = tf.nn.softmax(logits_test)
 
-    if mode == tf.estimator.ModeKeys.PREDICT:
-        return tf.estimator.EstimatorSpec(mode, predictions=predict_class)
+    # if mode == tf.estimator.ModeKeys.PREDICT:
+    #     return tf.estimator.EstimatorSpec(mode, predictions=predict_class)
 
     loss_op = loss(logits_train, labels)
     train_op = train(loss_op, learning_rate=learning_rate)
-    accuracy_op = accuracy(logits_test, labels)
+    accuracy_op = accuracy(predict_class, labels)
 
     # estimate_specs = tf.estimator.EstimatorSpec(
     #     mode=mode,
@@ -210,18 +213,23 @@ def model_fn(features,labels, mode):
     #     eval_metric_ops={'accuracy': accuracy_op}
     # )
 
-    return loss_op, train_op, accuracy_op, logits_test, predict_class
+    # return loss_op, train_op, accuracy_op, logits_test, predict_class
+    return loss_op, accuracy_op
 
 
 # === MAIN ===
 
 image_data, label = distorted_input(DATA_DIR, BATCH_SIZE)
-losses, train, acc, aa,bb = model_fn(image_data, label, 'train')
+losses, accuracy = model_fn(image_data, label, 'train')
+# losses, train, acc, aa,bb = model_fn(image_data, label, 'train')
+# softmax = cnn_network(image_data, 'train')
 
 # input_fn = {'features': image_data, 'labels': label}
 # model = tf.estimator.Estimator(model_fn)
 #
 # training = model.train( input_fn, max_steps=100)
+
+count = 0
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -234,9 +242,26 @@ with tf.Session() as sess:
     try:
         while not coord.should_stop():
 
-            sess.run(train)
-            print(sess.run(aa))
-            print(sess.run(bb))
+            # print(sess.run(image_data))
+            # print(sess.run(tf.shape(image_data)))
+            # print(sess.run(tf.shape(label)))
+            print(sess.run(losses))
+            print(sess.run(accuracy))
+            # print(sess.run(a))
+            # print(sess.run(b))
+            
+            # with tf.variable_scope('layer1', reuse=True):
+            #     print(sess.run(tf.get_variable('weights')))
+            #     print(sess.run(tf.shape(tf.get_variable('weights'))))
+            
+            
+            count +=1
+            if count>=10:
+                break
+            
+            # sess.run(train)
+            # print(sess.run(aa))
+            # print(sess.run(bb))
             # print(sess.run(acc))
             # print(sess.run(losses))
 
