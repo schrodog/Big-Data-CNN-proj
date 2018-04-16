@@ -17,7 +17,7 @@ DATA_DIR = os.path.join(os.getcwd(), '..', 'cifar-10-batches-bin')
 NUM_CLASS = 10
 NUM_EXAMPLE_TRAIN = 50000
 BATCH_SIZE = 128
-learning_rate = 0.01
+learning_rate = 0.0001
 keep_prob = tf.placeholder(tf.float32)
 
 
@@ -41,17 +41,21 @@ def generate_input(image, label, min_list, batch_size, shuffle):
     if shuffle:
         images, label_batch = tf.train.shuffle_batch([image, label], batch_size=batch_size,
         num_threads=num_preprocess_threads, capacity=min_list + 3 * batch_size, min_after_dequeue=min_list)
+        return images, tf.reshape(label_batch, [batch_size] )
     else:
-        images, label_batch = tf.train.shuffle_batch([image, label], batch_size=batch_size,
-            num_threads=num_preprocess_threads, capacity=min_list + 3 * batch_size)
-    return images, tf.reshape(label_batch, [batch_size])
+        images, label_batch = tf.train.batch([image, label], batch_size=batch_size, num_threads=num_preprocess_threads, capacity=min_list + 3 * batch_size )
+        return images, tf.reshape(label_batch, [batch_size] )
 
 '''for training'''
-def distorted_input(data_dir, batch_size):
+def distorted_input(data_dir, batch_size, mode):
     # res = unpickle( os.path.join(DATA_DIR, 'data_batch_1'))
     # read_input(res[b'data'], res[b'labels'], FLAGS.batch_size)
 
-    filenames = [os.path.join(data_dir, 'data_batch_'+str(i)+'.bin') for i in range(1,6) ]
+    filename = ''
+    if mode == 'train':
+        filenames = [os.path.join(data_dir, 'data_batch_'+str(i)+'.bin') for i in range(1,5) ]
+    else:
+        filenames = [os.path.join(data_dir, 'data_batch_5.bin') ]
 
     for f in filenames:
         if not tf.gfile.Exists(f):
@@ -60,7 +64,12 @@ def distorted_input(data_dir, batch_size):
     file_list = tf.train.string_input_producer(filenames)
 
     image_data, label  = read_input(file_list)
-
+    
+    if mode == 'test':
+        reshaped_image = tf.cast(image_data, tf.float32)
+        reshaped_image.set_shape([32, 32, 3])
+        label.set_shape([1])
+        return generate_input(reshaped_image, label, 10000, batch_size, shuffle=False)
 
     with tf.name_scope('preprocess'):
         # read_input_data = read_input(file_list)
@@ -80,8 +89,8 @@ def distorted_input(data_dir, batch_size):
         # random shuffling
         min_fraction_example = 0.4
         min_list_examples = int(NUM_EXAMPLE_TRAIN * min_fraction_example)
-        print ('Filling queue with %d CIFAR images before starting to train. '
-            'This will take a few minutes.' % min_list_examples)
+        print ('Filling queue with %d CIFAR images' % min_list_examples)
+        
         return generate_input(float_image, label, min_list_examples, batch_size, shuffle=True)
 
 
@@ -174,8 +183,8 @@ def loss(input_x, input_y):
     return cross_entropy
 
 # train
+global_step = tf.train.get_or_create_global_step()
 def train(losses, learning_rate):
-    global_step = tf.train.get_or_create_global_step()
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(losses, global_step=global_step)
     
     return train_op
@@ -192,6 +201,7 @@ def accuracy(input_x, input_y):
 
 
 def model_fn(features,labels, mode):
+
     logits_train = cnn_network(features, mode='train')
     logits_test = cnn_network(features, mode='test')
 
@@ -201,9 +211,14 @@ def model_fn(features,labels, mode):
     # if mode == tf.estimator.ModeKeys.PREDICT:
     #     return tf.estimator.EstimatorSpec(mode, predictions=predict_class)
 
-    loss_op = loss(logits_train, labels)
-    train_op = train(loss_op, learning_rate=learning_rate)
-    accuracy_op = accuracy(predict_class, labels)
+    if mode == 'train':
+        loss_op = loss(logits_train, labels)
+        train_op = train(loss_op, learning_rate=learning_rate)
+        return loss_op
+        
+    if mode == 'test':
+        accuracy_op = accuracy(predict_class, labels)
+        return accuracy_op
 
     # estimate_specs = tf.estimator.EstimatorSpec(
     #     mode=mode,
@@ -214,13 +229,15 @@ def model_fn(features,labels, mode):
     # )
 
     # return loss_op, train_op, accuracy_op, logits_test, predict_class
-    return loss_op, accuracy_op
 
 
 # === MAIN ===
 
-image_data, label = distorted_input(DATA_DIR, BATCH_SIZE)
-losses, accuracy = model_fn(image_data, label, 'train')
+image_data_train, label_train = distorted_input(DATA_DIR, BATCH_SIZE, 'train')
+losses = model_fn(image_data_train, label_train, 'train')
+image_data_test, label_test = distorted_input(DATA_DIR, BATCH_SIZE, 'test')
+accuracy = model_fn(image_data_test, label_test, 'test')
+
 # losses, train, acc, aa,bb = model_fn(image_data, label, 'train')
 # softmax = cnn_network(image_data, 'train')
 
@@ -230,6 +247,7 @@ losses, accuracy = model_fn(image_data, label, 'train')
 # training = model.train( input_fn, max_steps=100)
 
 count = 0
+
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
@@ -242,28 +260,22 @@ with tf.Session() as sess:
     try:
         while not coord.should_stop():
 
-            # print(sess.run(image_data))
-            # print(sess.run(tf.shape(image_data)))
-            # print(sess.run(tf.shape(label)))
-            print(sess.run(losses))
-            print(sess.run(accuracy))
-            # print(sess.run(a))
-            # print(sess.run(b))
+            count +=1
+            # print(sess.run(tf.train.get_global_step()))
+            
+            print('batch:', count, 'loss:',sess.run(losses))
+            
+            if count%5 == 0:
+                print('accuracy: ',sess.run(accuracy))
             
             # with tf.variable_scope('layer1', reuse=True):
             #     print(sess.run(tf.get_variable('weights')))
             #     print(sess.run(tf.shape(tf.get_variable('weights'))))
             
             
-            count +=1
-            if count>=10:
-                break
+            # if count>=1:
+            #     break
             
-            # sess.run(train)
-            # print(sess.run(aa))
-            # print(sess.run(bb))
-            # print(sess.run(acc))
-            # print(sess.run(losses))
 
     except tf.errors.OutOfRangeError:
         print('Done')
