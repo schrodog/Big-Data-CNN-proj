@@ -126,6 +126,7 @@ def cnn_network(input_x, mode):
         activ1 = _activation(conv1, bias1)
         # [b,16,16,64]
         pool1 = _pool(activ1, ksize=[1,3,3,1], strides=[1,2,2,1])
+        tf.summary.histogram('layer1', pool1)
 
     with tf.variable_scope("layer2", reuse=tf.AUTO_REUSE):
         # [b,16,16,64]
@@ -135,6 +136,7 @@ def cnn_network(input_x, mode):
         activ2 = _activation(conv2, bias2)
         # [b,16,16,64]
         pool2 = _pool(activ2, ksize=[1,3,3,1], strides=[1,1,1,1])
+        tf.summary.histogram('layer2', pool2)
 
     with tf.variable_scope("layer3", reuse=tf.AUTO_REUSE):
         # [b,16,16,128]
@@ -144,6 +146,7 @@ def cnn_network(input_x, mode):
         activ3 = _activation(conv3, bias3)
         # [b,16,16,128]
         pool3 = _pool(activ3, ksize=[1,3,3,1], strides=[1,1,1,1])
+        tf.summary.histogram('layer3', pool3)
 
     # with tf.variable_scope("layer4", reuse=tf.AUTO_REUSE):
     #     # [b,8,8,196]
@@ -159,11 +162,13 @@ def cnn_network(input_x, mode):
         reshape = tf.reshape(pool2, [-1, n*n*m])
         w_fc1 = _weighted_variable([n*n*m, 1024])
         b_fc1 = _bias_variable([1024])
+        
         # flat = tf.contrib.layers.flatten(pool2)
 	    #activ4 = tf.nn.relu(tf.matmul(reshape, weight4) + bias4) # choose which activ4?
 
         # [b,384]
         activ_fc1 = tf.nn.relu(tf.matmul(reshape, w_fc1) + b_fc1)
+        tf.summary.histogram('fc1', activ_fc1)
         # fc1 = tf.layers.dense(flat, 384)
         # drop5 = tf.nn.dropout(fc1, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
 
@@ -174,6 +179,8 @@ def cnn_network(input_x, mode):
         weights4 = _weighted_variable([1024,384])
         bias4 = _bias_variable([384])
         activ4 = tf.nn.relu(tf.matmul(activ_fc1,weights4) + bias4 )
+        tf.summary.histogram('fc2', activ4)
+        
         # [b,384]
         # fc1 = tf.layers.dense(flat, 384)
         # drop5 = tf.nn.dropout(activ4, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
@@ -189,6 +196,7 @@ def cnn_network(input_x, mode):
         weight5 = _weighted_variable([384, NUM_CLASS])
         bias5 = _bias_variable([NUM_CLASS])
         softmax = tf.nn.softmax(tf.matmul(activ4, weight5) + bias5)
+        tf.summary.histogram('softmax', softmax)
 
     return softmax
 
@@ -274,6 +282,8 @@ loss_op, lossx, lossy = loss_fn(logits_train, labeln)
 # loss_op = loss_fn(logits_train, label_train)
 train_op = train(loss_op, learning_rate=learning_rate)
 
+summaries = tf.summary.merge_all()
+
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
@@ -289,6 +299,9 @@ with tf.Session() as sess:
             count +=1
 
             sess.run(train_op)
+            summ = sess.run(summaries)
+            writer.add_summary(summ)
+            
             # print(sess.run(lossx), sess.run(lossy))
             # with tf.variable_scope('layer2', reuse=True):
             #     # print(sess.run(tf.get_variable('weights')[0,0,0]))
