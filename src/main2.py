@@ -2,8 +2,8 @@ import numpy as np
 import tensorflow as tf
 import os
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-FLAGS = tf.app.flags.FLAGS
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# FLAGS = tf.app.flags.FLAGS
 
 '''
 50,000 (train+validation), 10,000 test image
@@ -14,11 +14,13 @@ binary format: [1,1024,1024,1024]
 # tf.app.flags.DEFINE_integer('batch_size', 128, "batch size")
 DATA_DIR = os.path.join(os.getcwd(), '..', 'cifar-10-batches-bin')
 
-NUM_EPOCHS = 30000
+NUM_EPOCHS = 100
 NUM_CLASS = 10
 NUM_EXAMPLE_TRAIN = 50000
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 learning_rate = 0.0004
+DECAY_EPOCH = 300
+DECAY_FACTOR = 0.96
 # keep_prob = tf.placeholder(tf.float32)
 
 
@@ -54,19 +56,24 @@ def distorted_input(data_dir, batch_size, mode):
 
     filename = ''
     if mode == 'train':
-        filenames = [os.path.join(data_dir, 'data_batch_'+str(i)+'.bin') for i in range(1,6) ]
-    else:
+        filenames = [os.path.join(data_dir, 'data_batch_'+str(i)+'.bin') for i in range(1,5) ]
+    elif mode == 'validation':
+        filenames = [os.path.join(data_dir, 'data_batch_5.bin') ]
+    elif mode == 'test':
         filenames = [os.path.join(data_dir, 'test_batch.bin') ]
 
     for f in filenames:
         if not tf.gfile.Exists(f):
             raise ValueError('Failed to find file: ' + f)
 
-    file_list = tf.train.string_input_producer(filenames, num_epochs=NUM_EPOCHS)
+    if mode == 'train' or mode == 'validation':
+        file_list = tf.train.string_input_producer(filenames, num_epochs=NUM_EPOCHS)
+    else:
+        file_list = tf.train.string_input_producer(filenames, num_epochs=1)
 
     image_data, label  = read_input(file_list)
 
-    if mode == 'test':
+    if mode == 'test' or mode == 'validation':
         reshaped_image = tf.cast(image_data, tf.float32)
         reshaped_image.set_shape([32, 32, 3])
         label.set_shape([1])
@@ -120,9 +127,9 @@ def cnn_network(input_x, mode):
 
     with tf.variable_scope("layer1", reuse=tf.AUTO_REUSE):
         # [b,32,32,3]
-        filters1 = _weighted_variable([5,5,3,32])
+        filters1 = _weighted_variable([5,5,3,64])
         conv1 = _conv2d(input_x, filters1, [1,1,1,1])
-        bias1 = _bias_variable([32])
+        bias1 = _bias_variable([64])
         activ1 = _activation(conv1, bias1)
         # [b,16,16,64]
         pool1 = _pool(activ1, ksize=[1,3,3,1], strides=[1,2,2,1])
@@ -130,20 +137,19 @@ def cnn_network(input_x, mode):
 
     with tf.variable_scope("layer2", reuse=tf.AUTO_REUSE):
         # [b,16,16,64]
-        filters2 = _weighted_variable([3,3,32,64])
+        filters2 = _weighted_variable([5,5,64,128])
         conv2 = _conv2d(pool1, filters2, [1,1,1,1])
-        bias2 = _bias_variable([64])
+        bias2 = _bias_variable([128])
         activ2 = _activation(conv2, bias2)
         # [b,16,16,64]
-        pool2 = _pool(activ2, ksize=[1,3,3,1], strides=[1,1,1,1])
+        pool2 = _pool(activ2, ksize=[1,3,3,1], strides=[1,2,2,1])
         tf.summary.histogram('layer2', pool2)
-        
 
     with tf.variable_scope("layer3", reuse=tf.AUTO_REUSE):
         # [b,16,16,128]
-        filters3 = _weighted_variable([3,3,64,64])
+        filters3 = _weighted_variable([3,3,128,128])
         conv3 = _conv2d(pool2, filters3, [1,1,1,1])
-        bias3 = _bias_variable([64])
+        bias3 = _bias_variable([128])
         activ3 = _activation(conv3, bias3)
         # [b,16,16,128]
         pool3 = _pool(activ3, ksize=[1,3,3,1], strides=[1,1,1,1])
@@ -151,16 +157,17 @@ def cnn_network(input_x, mode):
 
     # with tf.variable_scope("layer4", reuse=tf.AUTO_REUSE):
     #     # [b,8,8,196]
-    #     filters4 = _weighted_variable([3,3,128,196])
+    #     filters4 = _weighted_variable([3,3,128,256])
     #     conv4 = _conv2d(pool3, filters4, [1,1,1,1])
-    #     bias4 = _bias_variable([196])
+    #     bias4 = _bias_variable([256])
     #     activ4 = _activation(conv4, bias4)
     #     # [b,8,8,196]
     #     pool4 = _pool(activ4, ksize=[1,2,2,1], strides=[1,1,1,1])
+    #     tf.summary.histogram('layer4', pool4)
 
     with tf.variable_scope("fc1", reuse=tf.AUTO_REUSE):
-        n = 16; m = 64
-        reshape = tf.reshape(pool3, [-1, n*n*m])
+        n = 8; m = 128
+        reshape = tf.reshape(pool2, [-1, n*n*m])
         w_fc1 = _weighted_variable([n*n*m, 1024])
         b_fc1 = _bias_variable([1024])
         # flat = tf.contrib.layers.flatten(pool2)
@@ -169,7 +176,7 @@ def cnn_network(input_x, mode):
         # [b,384]
         activ_fc1 = tf.nn.relu(tf.matmul(reshape, w_fc1) + b_fc1)
         tf.summary.histogram('fc1', activ_fc1)
-        
+
         # fc1 = tf.layers.dense(flat, 384)
         # drop5 = tf.nn.dropout(fc1, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
 
@@ -181,10 +188,10 @@ def cnn_network(input_x, mode):
         bias4 = _bias_variable([384])
         activ4 = tf.nn.relu(tf.matmul(activ_fc1,weights4) + bias4 )
         tf.summary.histogram('fc2', activ4)
-        
+
         # [b,384]
         # fc1 = tf.layers.dense(flat, 384)
-        # drop5 = tf.nn.dropout(activ4, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
+        drop5 = tf.nn.dropout(activ4, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
 
     with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE):
 
@@ -196,10 +203,10 @@ def cnn_network(input_x, mode):
         # out = tf.layers.dense(drop5, NUM_CLASS)
         weight5 = _weighted_variable([384, NUM_CLASS])
         bias5 = _bias_variable([NUM_CLASS])
-        softmax = tf.nn.softmax(tf.matmul(activ4, weight5) + bias5)
-        
+        softmax = tf.nn.softmax(tf.matmul(drop5, weight5) + bias5)
+
         tf.summary.histogram('softmax', softmax)
-        
+
 
     return softmax
 
@@ -216,7 +223,9 @@ def loss_fn(input_x, input_y):
 # train
 global_step = tf.train.get_or_create_global_step()
 def train(losses, learning_rate):
-    train_op = tf.train.AdamOptimizer(learning_rate).minimize(losses, global_step=global_step)
+    lr = tf.train.exponential_decay(learning_rate, global_step, DECAY_EPOCH, DECAY_FACTOR, staircase=True)
+    tf.summary.scalar('learning rate', lr)
+    train_op = tf.train.AdamOptimizer(lr).minimize(losses, global_step=global_step)
 
     return train_op
 
@@ -232,14 +241,10 @@ def accuracy_fn(input_x, input_y):
 def model_fn(features,labels, mode):
 
     logits_train = cnn_network(features, mode='train')
-    logits_test = cnn_network(features, mode='test')
+    logits_test = cnn_network(features, mode='validation')
 
     predict_class = tf.argmax(logits_test, axis=1)
     # predict_prob = tf.nn.softmax(logits_test)
-
-    # if mode == tf.estimator.ModeKeys.PREDICT:
-    #     return tf.estimator.EstimatorSpec(mode, predictions=predict_class)
-
 
     if mode == 'train':
         return logits_train, labels
@@ -250,81 +255,111 @@ def model_fn(features,labels, mode):
         accuracy_op = accuracy_fn(predict_class, labels)
         return accuracy_op
 
-    # estimate_specs = tf.estimator.EstimatorSpec(
-    #     mode=mode,
-    #     predictions=predict_class,
-    #     loss=loss,
-    #     train_op=train_op,
-    #     eval_metric_ops={'accuracy': accuracy_op}
-    # )
-
-    # return loss_op, train_op, accuracy_op, logits_test, predict_class
-
 
 # === MAIN ===
 
-count = 0
+# training
+def main(argv=None):
+    count = 0
 
-# train
-image_data_train, label_train = distorted_input(DATA_DIR, BATCH_SIZE, 'train')
-logits_train, label_trains = model_fn(image_data_train, label_train, 'train')
-loss_op, lossx, lossy = loss_fn(logits_train, label_trains)
-train_op = train(loss_op, learning_rate=learning_rate)
+    # train
+    image_data_train, label_train = distorted_input(DATA_DIR, BATCH_SIZE, 'train')
+    logits_train, label_trains = model_fn(image_data_train, label_train, 'train')
+    loss_op, lossx, lossy = loss_fn(logits_train, label_trains)
+    train_op = train(loss_op, learning_rate=learning_rate)
 
-# test
-image_data_test, label_test = distorted_input(DATA_DIR, BATCH_SIZE, 'test')
-accuracy_op = model_fn(image_data_test, label_test, 'test')
-# accuracy_op = accuracy(predict_class, label_test2)
+    # validate
+    image_data_valid, label_valid = distorted_input(DATA_DIR, BATCH_SIZE, 'validation')
+    accuracy_op = model_fn(image_data_valid, label_valid, 'test')
+    # accuracy_op = accuracy(predict_class, label_test2)
 
-summaries = tf.summary.merge_all()
-# loss_op = loss_fn(logits_train, label_train)
+    summaries = tf.summary.merge_all()
+    saver = tf.train.Saver()
+    # loss_op = loss_fn(logits_train, label_train)
 
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    sess.run(tf.local_variables_initializer())
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
 
-    writer = tf.summary.FileWriter("logs/", sess.graph)
+        writer = tf.summary.FileWriter("logs/", sess.graph)
 
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-
-
-    try:
-        while not coord.should_stop():
-            count +=1
-
-            sess.run(train_op)
-            summ = sess.run(summaries)
-            writer.add_summary(summ)
-            
-            # print(sess.run(lossx), sess.run(lossy))
-            # with tf.variable_scope('layer2', reuse=True):
-            #     print(sess.run(tf.get_variable('weights')[0,0,0]))
-                # print(sess.run(tf.get_variable('bias')[0]))
-
-            if count % 2 == 0:
-                print('step:', count, 'loss:',sess.run(loss_op))
-                    # print(sess.run(tf.shape(tf.get_variable('weights'))))
-
-            if count%10 == 0:
-                print('accuracy: ',sess.run(accuracy_op))
-
-    except tf.errors.OutOfRangeError:
-        print('Done')
-    finally:
-        coord.request_stop()
-
-    coord.join(threads)
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
 
+        try:
+            while not coord.should_stop():
+                count +=1
+
+                sess.run(train_op)
+                summ = sess.run(summaries)
+                writer.add_summary(summ, global_step=sess.run(global_step))
+
+                # print(sess.run(lossx), sess.run(lossy))
+                # with tf.variable_scope('layer2', reuse=True):
+                #     print(sess.run(tf.get_variable('weights')[0,0,0]))
+                    # print(sess.run(tf.get_variable('bias')[0]))
+
+                if count % 5 == 0:
+                    print('step:', count, 'loss:',sess.run(loss_op))
+                        # print(sess.run(tf.shape(tf.get_variable('weights'))))
+
+                if count%50 == 0:
+                    print('accuracy: ',sess.run(accuracy_op))
+
+        except tf.errors.OutOfRangeError:
+            print('Done')
+        finally:
+            coord.request_stop()
+
+        coord.join(threads)
+        saver_path = saver.save(sess, os.path.join(DATA_DIR,'..', 'model' , 'model2.ckpt'))
+        print("Model saved in path: %s" % saver_path)
+
+# testing performance
+def eval_fn():
+    image_data_test, label_test = distorted_input(DATA_DIR, BATCH_SIZE, 'test')
+    predict = cnn_network(image_data_test,'test')
+    out = tf.nn.in_top_k(predict, label_test, 1)
+    out2 = tf.reduce_sum(tf.cast(out, tf.float32)) / BATCH_SIZE
+
+    # tf.reset_default_graph()
+    # saver = tf.train.import_meta_graph(os.path.join(os.getcwd(), '..', 'model', 'model2.ckpt.meta'))
+    saver = tf.train.Saver()
+
+    with tf.Session() as sess:
+        # sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        saver.restore(sess, os.path.join(os.getcwd(), '..', 'model', 'model2.ckpt'))
+
+
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+        result = 0; count = 0; total = 0;
+
+        try:
+            while not coord.should_stop():
+
+                result = sess.run(out2)
+                total += result
+                print(result)
+                count += 1
+
+        except tf.errors.OutOfRangeError:
+                print('Done')
+
+        finally:
+            coord.request_stop()
+            print('final accuracy:',total/count)
+
+            coord.join(threads)
 
 
 
-
-
-# if count>=1:
-#     break
-
+if __name__ == '__main__':
+    # main()
+    eval_fn()
 
 
 

@@ -18,7 +18,7 @@ NUM_EPOCHS = 30000
 NUM_CLASS = 10
 NUM_EXAMPLE_TRAIN = 50000
 BATCH_SIZE = 300
-learning_rate = 0.0005
+learning_rate = 0.003
 # keep_prob = tf.placeholder(tf.float32)
 
 
@@ -162,7 +162,7 @@ def cnn_network(input_x, mode):
         reshape = tf.reshape(pool2, [-1, n*n*m])
         w_fc1 = _weighted_variable([n*n*m, 1024])
         b_fc1 = _bias_variable([1024])
-        
+
         # flat = tf.contrib.layers.flatten(pool2)
 	    #activ4 = tf.nn.relu(tf.matmul(reshape, weight4) + bias4) # choose which activ4?
 
@@ -180,7 +180,7 @@ def cnn_network(input_x, mode):
         bias4 = _bias_variable([384])
         activ4 = tf.nn.relu(tf.matmul(activ_fc1,weights4) + bias4 )
         tf.summary.histogram('fc2', activ4)
-        
+
         # [b,384]
         # fc1 = tf.layers.dense(flat, 384)
         # drop5 = tf.nn.dropout(activ4, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
@@ -301,7 +301,7 @@ with tf.Session() as sess:
             sess.run(train_op)
             summ = sess.run(summaries)
             writer.add_summary(summ)
-            
+
             # print(sess.run(lossx), sess.run(lossy))
             # with tf.variable_scope('layer2', reuse=True):
             #     # print(sess.run(tf.get_variable('weights')[0,0,0]))
