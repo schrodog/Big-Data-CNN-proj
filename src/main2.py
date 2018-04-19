@@ -316,12 +316,20 @@ def main(argv=None):
         saver_path = saver.save(sess, os.path.join(DATA_DIR,'..', 'model' , 'model2.ckpt'))
         print("Model saved in path: %s" % saver_path)
 
+
 # testing performance
 def eval_fn():
     image_data_test, label_test = distorted_input(DATA_DIR, BATCH_SIZE, 'test')
     predict = cnn_network(image_data_test,'test')
-    out = tf.nn.in_top_k(predict, label_test, 1)
-    out2 = tf.reduce_sum(tf.cast(out, tf.float32)) / BATCH_SIZE
+
+    # top_k metrics
+    top_k = tf.nn.in_top_k(predict, label_test, 2)
+    top_k = tf.reduce_sum(tf.cast(top_k, tf.float32)) / BATCH_SIZE
+    # RMSE
+    predict_class = tf.cast(tf.argmax(predict, axis=1), dtype=tf.int32)
+    rmse = tf.metrics.mean_squared_error(label_test, predict_class)
+    # confusion matrix
+    confu_mat = tf.confusion_matrix(label_test, predict_class)
 
     # tf.reset_default_graph()
     # saver = tf.train.import_meta_graph(os.path.join(os.getcwd(), '..', 'model', 'model2.ckpt.meta'))
@@ -336,14 +344,18 @@ def eval_fn():
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        result = 0; count = 0; total = 0;
+        result = 0; count = 0; total1 = 0; total2 = 0;
 
         try:
             while not coord.should_stop():
 
-                result = sess.run(out2)
-                total += result
-                print(result)
+                top_k_value = sess.run(top_k)
+                rmse_value = sess.run(rmse)[0]
+                total1 += top_k_value
+                total2 += rmse_value
+                print(top_k_value, rmse_value)
+                # print(sess.run(confu_mat))
+
                 count += 1
 
         except tf.errors.OutOfRangeError:
@@ -351,7 +363,8 @@ def eval_fn():
 
         finally:
             coord.request_stop()
-            print('final accuracy:',total/count)
+            print('final accuracy:',total1/count)
+            print('final rmse:',total2/count)
 
             coord.join(threads)
 
