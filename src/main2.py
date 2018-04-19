@@ -3,7 +3,6 @@ import tensorflow as tf
 import os
 
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-# FLAGS = tf.app.flags.FLAGS
 
 '''
 50,000 (train+validation), 10,000 test image
@@ -11,15 +10,14 @@ import os
 binary format: [1,1024,1024,1024]
 '''
 
-# tf.app.flags.DEFINE_integer('batch_size', 128, "batch size")
 DATA_DIR = os.path.join(os.getcwd(), '..', 'cifar-10-batches-bin')
 
 NUM_EPOCHS = 100
 NUM_CLASS = 10
 NUM_EXAMPLE_TRAIN = 50000
 BATCH_SIZE = 128
-learning_rate = 0.0004
-DECAY_EPOCH = 300
+learning_rate = 0.0003
+DECAY_EPOCH = 600
 DECAY_FACTOR = 0.96
 # keep_prob = tf.placeholder(tf.float32)
 
@@ -137,9 +135,9 @@ def cnn_network(input_x, mode):
 
     with tf.variable_scope("layer2", reuse=tf.AUTO_REUSE):
         # [b,16,16,64]
-        filters2 = _weighted_variable([5,5,64,128])
+        filters2 = _weighted_variable([3,3,64,64])
         conv2 = _conv2d(pool1, filters2, [1,1,1,1])
-        bias2 = _bias_variable([128])
+        bias2 = _bias_variable([64])
         activ2 = _activation(conv2, bias2)
         # [b,16,16,64]
         pool2 = _pool(activ2, ksize=[1,3,3,1], strides=[1,2,2,1])
@@ -147,9 +145,9 @@ def cnn_network(input_x, mode):
 
     with tf.variable_scope("layer3", reuse=tf.AUTO_REUSE):
         # [b,16,16,128]
-        filters3 = _weighted_variable([3,3,128,128])
+        filters3 = _weighted_variable([3,3,64,64])
         conv3 = _conv2d(pool2, filters3, [1,1,1,1])
-        bias3 = _bias_variable([128])
+        bias3 = _bias_variable([64])
         activ3 = _activation(conv3, bias3)
         # [b,16,16,128]
         pool3 = _pool(activ3, ksize=[1,3,3,1], strides=[1,1,1,1])
@@ -166,7 +164,7 @@ def cnn_network(input_x, mode):
     #     tf.summary.histogram('layer4', pool4)
 
     with tf.variable_scope("fc1", reuse=tf.AUTO_REUSE):
-        n = 8; m = 128
+        n = 8; m = 64
         reshape = tf.reshape(pool2, [-1, n*n*m])
         w_fc1 = _weighted_variable([n*n*m, 1024])
         b_fc1 = _bias_variable([1024])
@@ -309,12 +307,14 @@ def main(argv=None):
 
         except tf.errors.OutOfRangeError:
             print('Done')
+
         finally:
             coord.request_stop()
+            coord.join(threads)
 
-        coord.join(threads)
-        saver_path = saver.save(sess, os.path.join(DATA_DIR,'..', 'model' , 'model2.ckpt'))
-        print("Model saved in path: %s" % saver_path)
+            saver_path = saver.save(sess, os.path.join(DATA_DIR,'..', 'model' , 'model3.ckpt'))
+            print("Model saved in path:", saver_path)
+
 
 
 # testing performance
@@ -336,9 +336,8 @@ def eval_fn():
     saver = tf.train.Saver()
 
     with tf.Session() as sess:
-        # sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
-        saver.restore(sess, os.path.join(os.getcwd(), '..', 'model', 'model2.ckpt'))
+        saver.restore(sess, os.path.join(os.getcwd(), '..', 'model', 'model3.ckpt'))
 
 
         coord = tf.train.Coordinator()
@@ -371,8 +370,8 @@ def eval_fn():
 
 
 if __name__ == '__main__':
-    # main()
-    eval_fn()
+    main()
+    # eval_fn()
 
 
 
