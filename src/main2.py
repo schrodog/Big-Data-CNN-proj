@@ -12,12 +12,12 @@ binary format: [1,1024,1024,1024]
 
 DATA_DIR = os.path.join(os.getcwd(), '..', 'cifar-10-batches-bin')
 
-NUM_EPOCHS = 100
+NUM_EPOCHS = 10000
 NUM_CLASS = 10
 NUM_EXAMPLE_TRAIN = 50000
 BATCH_SIZE = 128
-learning_rate = 0.0003
-DECAY_EPOCH = 600
+learning_rate = 0.0001
+DECAY_EPOCH = 3000
 DECAY_FACTOR = 0.96
 # keep_prob = tf.placeholder(tf.float32)
 
@@ -81,9 +81,9 @@ def distorted_input(data_dir, batch_size, mode):
         # read_input_data = read_input(file_list)
         reshaped_image = tf.cast(image_data, tf.float32)
         # crop a section of the image
-        distorted_image = tf.random_crop(reshaped_image, [32, 32, 3])
+        # distorted_image = tf.random_crop(reshaped_image, [32, 32, 3])
         # flip the image horizontally
-        distorted_image = tf.image.random_flip_left_right(distorted_image)
+        distorted_image = tf.image.random_flip_left_right(reshaped_image)
         # randomize the order of the operation
         distorted_image = tf.image.random_brightness(distorted_image, max_delta=63)
         distorted_image = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8)
@@ -182,8 +182,8 @@ def cnn_network(input_x, mode):
         # reshape = tf.reshape(pool4, [input_x.shape.as_list()[0], -1])
         # flat = tf.contrib.layers.flatten(pool2)
         #activ4 = tf.nn.relu(tf.matmul(reshape, weight4) + bias4) # choose which activ4?
-        weights4 = _weighted_variable([1024,384])
-        bias4 = _bias_variable([384])
+        weights4 = _weighted_variable([1024,1024])
+        bias4 = _bias_variable([1024])
         activ4 = tf.nn.relu(tf.matmul(activ_fc1,weights4) + bias4 )
         tf.summary.histogram('fc2', activ4)
 
@@ -199,7 +199,7 @@ def cnn_network(input_x, mode):
         #     out = tf.layers.dense(fc1, NUM_CLASS)
         # [b,10]
         # out = tf.layers.dense(drop5, NUM_CLASS)
-        weight5 = _weighted_variable([384, NUM_CLASS])
+        weight5 = _weighted_variable([1024, NUM_CLASS])
         bias5 = _bias_variable([NUM_CLASS])
         softmax = tf.nn.softmax(tf.matmul(drop5, weight5) + bias5)
 
