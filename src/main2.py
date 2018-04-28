@@ -11,12 +11,13 @@ binary format: [1,1024,1024,1024]
 '''
 
 DATA_DIR = os.path.join(os.getcwd(), '..', 'cifar-10-batches-bin')
+FILE_RUN = 14
 
 NUM_EPOCHS = 10000
 NUM_CLASS = 10
 NUM_EXAMPLE_TRAIN = 50000
 BATCH_SIZE = 128
-learning_rate = 0.0001
+learning_rate = 0.00005
 DECAY_EPOCH = 3000
 DECAY_FACTOR = 0.96
 # keep_prob = tf.placeholder(tf.float32)
@@ -117,29 +118,43 @@ def _conv2d(inputs, kernel, strides, padding='SAME', name='conv'):
 def _pool(inputs, ksize, strides, padding='SAME', name='pool'):
     return tf.nn.max_pool(inputs, ksize=ksize, strides=strides, padding=padding, name=name)
 
-def _activation(conv, bias, name='activation'):
-    return tf.nn.relu(tf.add(conv, bias), name=name)
+def _activation(conv, bias, name='activation', norm=True, mode='train'):
+    mult_add = tf.add(conv,bias)
+    ema = tf.train.ExponentialMovingAverage(decay=0.5)
+    if norm:
+        fc_mean, fc_var = tf.nn.moments(mult_add, axes=[0,1,2])
+        if mode == 'train':
+            pass
+        else:
+            ema_apply_op = ema.apply([fc_mean, fc_var])
+            with tf.control_dependencies([ema_apply_op]):
+                fc_mean, fc_var = tf.identity(fc_mean), tf.identity(fc_var)
+
+        scale = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
+        shift = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
+        epsilon = 0.001
+        mult_add = tf.nn.batch_normalization(mult_add, fc_mean, fc_var, shift, scale, epsilon)
+
+    return tf.nn.relu(mult_add, name=name)
 
 
 def cnn_network(input_x, mode):
 
     with tf.variable_scope("layer1", reuse=tf.AUTO_REUSE):
-        # [b,32,32,3]
         filters1 = _weighted_variable([5,5,3,64])
         conv1 = _conv2d(input_x, filters1, [1,1,1,1])
         bias1 = _bias_variable([64])
-        activ1 = _activation(conv1, bias1)
-        # [b,16,16,64]
+        activ1 = _activation(conv1, bias1, mode=mode)
+
         pool1 = _pool(activ1, ksize=[1,3,3,1], strides=[1,2,2,1])
         tf.summary.histogram('layer1', pool1)
 
     with tf.variable_scope("layer2", reuse=tf.AUTO_REUSE):
-        # [b,16,16,64]
-        filters2 = _weighted_variable([3,3,64,64])
+        filters2 = _weighted_variable([5,5,64,64])
         conv2 = _conv2d(pool1, filters2, [1,1,1,1])
         bias2 = _bias_variable([64])
-        activ2 = _activation(conv2, bias2)
-        # [b,16,16,64]
+        activ2 = _activation(conv2, bias2, mode=mode)
+
         pool2 = _pool(activ2, ksize=[1,3,3,1], strides=[1,2,2,1])
         tf.summary.histogram('layer2', pool2)
 
@@ -165,7 +180,7 @@ def cnn_network(input_x, mode):
 
     with tf.variable_scope("fc1", reuse=tf.AUTO_REUSE):
         n = 8; m = 64
-        reshape = tf.reshape(pool2, [-1, n*n*m])
+        reshape = tf.reshape(pool3, [-1, n*n*m])
         w_fc1 = _weighted_variable([n*n*m, 1024])
         b_fc1 = _bias_variable([1024])
         # flat = tf.contrib.layers.flatten(pool2)
@@ -178,18 +193,18 @@ def cnn_network(input_x, mode):
         # fc1 = tf.layers.dense(flat, 384)
         # drop5 = tf.nn.dropout(fc1, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
 
-    with tf.variable_scope("fc2", reuse=tf.AUTO_REUSE):
-        # reshape = tf.reshape(pool4, [input_x.shape.as_list()[0], -1])
-        # flat = tf.contrib.layers.flatten(pool2)
-        #activ4 = tf.nn.relu(tf.matmul(reshape, weight4) + bias4) # choose which activ4?
-        weights4 = _weighted_variable([1024,1024])
-        bias4 = _bias_variable([1024])
-        activ4 = tf.nn.relu(tf.matmul(activ_fc1,weights4) + bias4 )
-        tf.summary.histogram('fc2', activ4)
-
-        # [b,384]
-        # fc1 = tf.layers.dense(flat, 384)
-        drop5 = tf.nn.dropout(activ4, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
+    # with tf.variable_scope("fc2", reuse=tf.AUTO_REUSE):
+    #     # reshape = tf.reshape(pool4, [input_x.shape.as_list()[0], -1])
+    #     # flat = tf.contrib.layers.flatten(pool2)
+    #     #activ4 = tf.nn.relu(tf.matmul(reshape, weight4) + bias4) # choose which activ4?
+    #     weights4 = _weighted_variable([1024,1024])
+    #     bias4 = _bias_variable([1024])
+    #     activ4 = tf.nn.relu(tf.matmul(activ_fc1,weights4) + bias4 )
+    #     tf.summary.histogram('fc2', activ4)
+    #
+    #     # [b,384]
+    #     # fc1 = tf.layers.dense(flat, 384)
+    #     drop5 = tf.nn.dropout(activ4, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
 
     with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE):
 
@@ -201,7 +216,7 @@ def cnn_network(input_x, mode):
         # out = tf.layers.dense(drop5, NUM_CLASS)
         weight5 = _weighted_variable([1024, NUM_CLASS])
         bias5 = _bias_variable([NUM_CLASS])
-        softmax = tf.nn.softmax(tf.matmul(drop5, weight5) + bias5)
+        softmax = tf.nn.softmax(tf.matmul(activ_fc1, weight5) + bias5)
 
         tf.summary.histogram('softmax', softmax)
 
@@ -279,7 +294,7 @@ def main(argv=None):
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
-        writer = tf.summary.FileWriter("logs/", sess.graph)
+        writer = tf.summary.FileWriter("logs/run"+str(FILE_RUN), sess.graph)
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
@@ -312,7 +327,7 @@ def main(argv=None):
             coord.request_stop()
             coord.join(threads)
 
-            saver_path = saver.save(sess, os.path.join(DATA_DIR,'..', 'model' , 'model3.ckpt'))
+            saver_path = saver.save(sess, os.path.join(DATA_DIR,'..', 'model' , 'model5.ckpt'))
             print("Model saved in path:", saver_path)
 
 
@@ -337,7 +352,7 @@ def eval_fn():
 
     with tf.Session() as sess:
         sess.run(tf.local_variables_initializer())
-        saver.restore(sess, os.path.join(os.getcwd(), '..', 'model', 'model3.ckpt'))
+        saver.restore(sess, os.path.join(os.getcwd(), '..', 'model', 'model4.ckpt'))
 
 
         coord = tf.train.Coordinator()
