@@ -11,8 +11,9 @@ binary format: [1,1024,1024,1024]
 '''
 
 DATA_DIR = os.path.join(os.getcwd(), '..', 'cifar-10-batches-bin')
-FILE_RUN = 50
-MODEL_NUM = 50
+# file_run: log file number; model file number
+FILE_RUN = 55
+MODEL_NUM = 55
 
 NUM_EPOCHS = 10000
 NUM_CLASS = 10
@@ -178,39 +179,40 @@ def cnn_network(input_x, mode):
         bn_training = True
 
     with tf.variable_scope("layer1", reuse=tf.AUTO_REUSE):
-        filters1 = _weighted_variable([3,3,3,64])
+        filters1 = _weighted_variable([2,2,3,64])
         conv1 = _conv2d(input_x, filters1, [1,1,1,1])
         bias1 = _bias_variable([64])
         # bn1 =
         bn1 = tf.layers.batch_normalization(conv1 + bias1, momentum=0.9, training=bn_training)
         activ1 = _activation(bn1, mode=mode)
+        # activ1 = _activation(conv1+bias1, mode=mode)
 
         pool1 = _pool(activ1, ksize=[1,3,3,1], strides=[1,2,2,1])
         # tf.summary.histogram('layer1', pool1)
 
     with tf.variable_scope("layer2", reuse=tf.AUTO_REUSE):
-        filters2 = _weighted_variable([3,3,64,64])
+        filters2 = _weighted_variable([2,2,64,64])
         conv2 = _conv2d(pool1, filters2, [1,1,1,1])
         bias2 = _bias_variable([64])
 
         bn2 = tf.layers.batch_normalization(conv2 + bias2, momentum=0.9, training=bn_training)
         activ2 = _activation(bn2, norm=False, mode=mode)
+        # activ2 = _activation(conv2+bias2, norm=False, mode=mode)
 
         pool2 = _pool(activ2, ksize=[1,3,3,1], strides=[1,2,2,1])
         # tf.summary.histogram('layer2', pool2)
 
-    with tf.variable_scope("layer3", reuse=tf.AUTO_REUSE):
-        # [b,16,16,128]
-        filters3 = _weighted_variable([3,3,64,64])
-        conv3 = _conv2d(pool2, filters3, [1,1,1,1])
-        bias3 = _bias_variable([64])
-
-        bn3 = tf.layers.batch_normalization(conv3 + bias3, momentum=0.9, training=bn_training)
-        activ3 = _activation(bn3, mode=mode)
-        # [b,16,16,128]
-        pool3 = _pool(activ3, ksize=[1,3,3,1], strides=[1,2,2,1])
-        # drop3 = tf.nn.dropout(pool3, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
-    #     # tf.summary.histogram('layer3', pool3)
+    # with tf.variable_scope("layer3", reuse=tf.AUTO_REUSE):
+    #     filters3 = _weighted_variable([3,3,64,64])
+    #     conv3 = _conv2d(pool2, filters3, [1,1,1,1])
+    #     bias3 = _bias_variable([64])
+    #
+    #     bn3 = tf.layers.batch_normalization(conv3 + bias3, momentum=0.9, training=bn_training)
+    #     activ3 = _activation(bn3, mode=mode)
+    #     # activ3 = _activation(conv3+bias3, mode=mode)
+    #
+    #     pool3 = _pool(activ3, ksize=[1,3,3,1], strides=[1,2,2,1])
+    #     # drop3 = tf.nn.dropout(pool3, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
 
     # with tf.variable_scope("layer4", reuse=tf.AUTO_REUSE):
     #     # [b,8,8,196]
@@ -223,17 +225,16 @@ def cnn_network(input_x, mode):
     #     tf.summary.histogram('layer4', pool4)
 
     with tf.variable_scope("fc1", reuse=tf.AUTO_REUSE):
-        n = 4; m = 64
-        reshape = tf.reshape(pool3, [-1, n*n*m])
+        n = 8; m = 64
+        reshape = tf.reshape(pool2, [-1, n*n*m])
         w_fc1 = _weighted_variable([n*n*m, 1024])
         b_fc1 = _bias_variable([1024])
 
-        # activ_fc1 = tf.nn.relu(tf.matmul(reshape, w_fc1) + b_fc1)
 
         bn_fc1 = tf.layers.batch_normalization(tf.matmul(reshape, w_fc1) + b_fc1, momentum=0.9, training=bn_training)
         activ_fc1 = tf.nn.relu(bn_fc1)
 
-        # activ_fc1 = _activation( tf.matmul(reshape, w_fc1), b_fc1, mode=mode, fc=True)
+        # activ_fc1 = tf.nn.relu(tf.matmul(reshape, w_fc1) + b_fc1)
         # tf.summary.histogram('fc1', activ_fc1)
 
         # fc1 = tf.layers.dense(flat, 384)
@@ -416,7 +417,7 @@ def eval_fn(num):
 
     # top_k metrics
     top_k = tf.nn.in_top_k(predict, label_test, 1)
-    top_k = tf.reduce_sum(tf.cast(top_k, tf.float32)) / 10000
+    top_k = tf.reduce_sum(tf.cast(top_k, tf.float32)) / BATCH_SIZE
     # RMSE
     predict_class = tf.cast(tf.argmax(predict, axis=1), dtype=tf.int32)
     rmse = tf.metrics.mean_squared_error(label_test, predict_class)
@@ -465,8 +466,8 @@ def eval_fn(num):
 
 
 if __name__ == '__main__':
-    # main()
-    eval_fn(50)
+    main()
+    # eval_fn(50)
 
 
 
