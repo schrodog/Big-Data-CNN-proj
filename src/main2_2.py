@@ -439,37 +439,23 @@ def eval_fn(num):
         sess.run(tf.local_variables_initializer())
         saver.restore(sess, os.path.join(os.getcwd(), '..', 'model', 'model'+str(num)+'.ckpt'))
 
-
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-        result = 0; count = 0; total1 = 0; total2 = 0;
+        # eval stat
+        top_k_value = sess.run(top_k)
+        rmse_value = sess.run(rmse)[0]
+        total1 += top_k_value
+        total2 += rmse_value
+        print(top_k_value, rmse_value)
+        print(sess.run(confu_mat))
 
-        try:
-            while not coord.should_stop():
+        benchmark.f1_score(sess.run(confu_mat))
+        benchmark.showROC(sess.run(res_matrix))
 
-                top_k_value = sess.run(top_k)
-                rmse_value = sess.run(rmse)[0]
-                total1 += top_k_value
-                total2 += rmse_value
-                print(top_k_value, rmse_value)
-                print(sess.run(confu_mat))
 
-                benchmark.f1_score(sess.run(confu_mat))
-                benchmark.showROC(sess.run(res_matrix))
-
-                count += 1
-                print(count)
-
-        except tf.errors.OutOfRangeError:
-                print('Done')
-
-        finally:
-            coord.request_stop()
-            # print('final accuracy:',total1/count)
-            # print('final rmse:',total2/count)
-
-            coord.join(threads)
+        coord.request_stop()
+        coord.join(threads)
 
 
     # with open('a','w') as f:
