@@ -182,8 +182,8 @@ def cnn_network(input_x, mode):
 
     with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE):
         out_weights = _weighted_variable(shape=[4096, 10], stddev=0.1)
-		  out_biases = _bias_variable([10])
-		  out = tf.add(tf.matmul(drop7, out_weights), out_biases)
+    	out_biases = _bias_variable([10])
+    	out = tf.add(tf.matmul(drop7, out_weights), out_biases)
 
     return out
 

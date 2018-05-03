@@ -24,7 +24,6 @@ BATCH_SIZE = 256
 learning_rate = 0.003
 DECAY_EPOCH = 8000
 DECAY_FACTOR = 0.96
-# keep_prob = tf.placeholder(tf.float32)
 
 
 def read_input(file_list):
@@ -37,7 +36,6 @@ def read_input(file_list):
     reshaped_bytes = tf.reshape(
         tf.strided_slice(record_bytes, [0], [3072]), [3, 32, 32]
     )
-    # [3,32,32] -> [32,32,3]
     image_data = tf.transpose(reshaped_bytes, [1,2,0])
 
     return image_data, label
@@ -54,9 +52,6 @@ def generate_input(image, label, min_list, batch_size, shuffle):
 
 '''for training'''
 def distorted_input(data_dir, batch_size, mode):
-    # res = unpickle( os.path.join(DATA_DIR, 'data_batch_1'))
-    # read_input(res[b'data'], res[b'labels'], FLAGS.batch_size)
-
     filename = ''
     if mode == 'train':
         filenames = [os.path.join(data_dir, 'data_batch_'+str(i)+'.bin') for i in range(1,6) ]
@@ -86,17 +81,14 @@ def distorted_input(data_dir, batch_size, mode):
             return generate_input(reshaped_image, label, 10000, batch_size, shuffle=True)
 
     with tf.name_scope('preprocess'):
-        # read_input_data = read_input(file_list)
         reshaped_image = tf.cast(image_data, tf.float32)
-        # crop a section of the image
-        # reshaped_image = tf.image.resize_images(reshaped_image, [64, 64] )
-        # distorted_image = tf.random_crop(reshaped_image, [32, 32, 3])
-        # distorted_image = tf.image.resize_image_with_crop_or_pad(reshaped_image, 32, 32)
+        
         # flip the image horizontally
         distorted_image = tf.image.random_flip_left_right(reshaped_image)
         # randomize the order of the operation
         distorted_image = tf.image.random_brightness(distorted_image, max_delta=63)
         distorted_image = tf.image.random_contrast(distorted_image, lower=0.2, upper=1.8)
+
         # Subtract off the mean and divide by the variance of the pixels.
         float_image = tf.image.per_image_standardization(distorted_image)
         # Set the shapes of tensors.
@@ -105,7 +97,6 @@ def distorted_input(data_dir, batch_size, mode):
         # random shuffling
         min_fraction_example = 1.0
         min_list_examples = int(NUM_EXAMPLE_TRAIN * min_fraction_example)
-        # print ('Filling queue with %d CIFAR images' % min_list_examples)
 
         return generate_input(float_image, label, min_list_examples, batch_size, shuffle=True)
 
@@ -128,48 +119,6 @@ def _pool(inputs, ksize, strides, padding='SAME', name='pool'):
     return tf.nn.max_pool(inputs, ksize=ksize, strides=strides, padding=padding, name=name)
 
 def _activation(mult_add, name='activation', norm=False, mode='train', fc=False):
-    # mult_add = tf.add(conv,bias)
-    # ema = tf.train.ExponentialMovingAverage(decay=0.5)
-    #
-    # mean_var = tf.Variable(tf.zeros( [bias.shape.as_list()[0]] ))
-    # variance_var = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
-    # # batch normalization
-    # if norm:
-    #     scale = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
-    #     shift = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
-    #     epsilon = 0.001
-    #
-    #
-    #     if fc:
-    #         fc_mean, fc_var = tf.nn.moments(mult_add, axes=[0])
-    #     else:
-    #         fc_mean, fc_var = tf.nn.moments(mult_add, axes=[0,1,2])
-    #
-    #     # fc_mean, fc_var = tf.identity(fc_mean), tf.identity(fc_var)
-    #
-    #     # if mode == 'train' or mode == 'test':
-    #     #     pass
-    #     # else:
-    #     #     ema_apply_op = ema.apply([fc_mean, fc_var])
-    #     #     with tf.control_dependencies([ema_apply_op]):
-    #     #         fc_mean, fc_var = tf.identity(fc_mean), tf.identity(fc_var)
-    #     if mode=='train':
-    #         # add value to variables
-    #         assign_mean = mean_var.assign(fc_mean)
-    #         assign_var = variance_var.assign(fc_var)
-    #         ema_apply_op = ema.apply([mean_var, variance_var])
-    #
-    #         with tf.control_dependencies([assign_mean, assign_var]):
-    #             # mult_add = tf.nn.batch_normalization(mult_add, fc_mean, fc_var, shift, scale, epsilon)
-    #             mult_add = tf.nn.batch_norm_with_global_normalization(mult_add, fc_mean, fc_var, shift, scale, epsilon, True)
-    #     else:
-    #         # ema_apply_op = ema.apply([mean_var, variance_var])
-    #         mean = ema.average(mean_var)
-    #         variance = ema.average(variance_var)
-    #         local_scale, local_shift = tf.identity(scale), tf.identity(shift)
-    #         # mult_add = tf.nn.batch_normalization(mult_add, mean, variance, local_shift, local_scale, epsilon)
-    #         mult_add = tf.nn.batch_norm_with_global_normalization(mult_add, mean, variance, local_shift, local_scale, epsilon, True)
-
     return tf.nn.relu(mult_add, name=name)
 
 
@@ -190,7 +139,6 @@ def cnn_network(input_x, mode):
         # activ1 = _activation(conv1+bias1, mode=mode)
 
         pool1 = _pool(activ1, ksize=[1,3,3,1], strides=[1,2,2,1])
-        # tf.summary.histogram('layer1', pool1)
 
     with tf.variable_scope("layer2", reuse=tf.AUTO_REUSE):
         filters2 = _weighted_variable([3,3,64,64])
@@ -202,7 +150,6 @@ def cnn_network(input_x, mode):
         # activ2 = _activation(conv2+bias2, norm=False, mode=mode)
 
         pool2 = _pool(activ2, ksize=[1,3,3,1], strides=[1,1,1,1])
-        # tf.summary.histogram('layer2', pool2)
 
     with tf.variable_scope("layer3", reuse=tf.AUTO_REUSE):
         filters3 = _weighted_variable([3,3,64,64])
@@ -212,31 +159,7 @@ def cnn_network(input_x, mode):
         bn3 = tf.layers.batch_normalization(conv3+bias3, momentum=0.9, training=bn_training)
         activ3 = _activation(bn3, mode=mode)
         # activ3 = _activation(conv3+bias3, mode=mode)
-
         pool3 = _pool(activ3, ksize=[1,3,3,1], strides=[1,2,2,1])
-        # drop3 = tf.nn.dropout(pool3, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
-
-    # with tf.variable_scope("layer4", reuse=tf.AUTO_REUSE):
-    #
-    #     filters4 = _weighted_variable([3,3,64,64])
-    #     conv4 = _conv2d(pool3, filters4, [1,1,1,1])
-    #     bias4 = _bias_variable([64])
-    #     bn4 = tf.layers.batch_normalization(conv4+bias4, momentum=0.9, training=bn_training)
-    #
-    #     activ4 = _activation(bn4, mode=mode)
-    #
-    #     pool4 = _pool(activ4, ksize=[1,2,2,1], strides=[1,1,1,1])
-    #
-    # with tf.variable_scope("layer5", reuse=tf.AUTO_REUSE):
-    #
-    #     filters5 = _weighted_variable([3,3,64,64])
-    #     conv5 = _conv2d(pool4, filters5, [1,1,1,1])
-    #     bias5 = _bias_variable([64])
-    #     bn5 = tf.layers.batch_normalization(conv5+bias5, momentum=0.9, training=bn_training)
-    #
-    #     activ5 = _activation(bn5, mode=mode)
-    #
-    #     pool5 = _pool(activ5, ksize=[1,2,2,1], strides=[1,1,1,1])
 
 
     with tf.variable_scope("fc1", reuse=tf.AUTO_REUSE):
@@ -248,23 +171,6 @@ def cnn_network(input_x, mode):
         bn_fc1 = tf.layers.batch_normalization(tf.matmul(reshape, w_fc1) + b_fc1, momentum=0.9, training=bn_training)
         activ_fc1 = tf.nn.relu(bn_fc1)
 
-        # activ_fc1 = tf.nn.relu(tf.matmul(reshape, w_fc1) + b_fc1)
-        # tf.summary.histogram('fc1', activ_fc1)
-
-        # fc1 = tf.layers.dense(flat, 384)
-        # drop5 = tf.nn.dropout(activ_fc1, keep_prob=0.5) #keep_prob usually 0.5 or 0.3
-
-    # with tf.variable_scope("fc2", reuse=tf.AUTO_REUSE):
-    #
-    #     w_fc2 = _weighted_variable([1024,1024])
-    #     b_fc2 = _bias_variable([1024])
-    #
-    #     bn_fc2 = tf.layers.batch_normalization(tf.matmul(activ_fc1, w_fc2) + b_fc2, momentum=0.9, training=bn_training)
-    #     activ_fc2 = tf.nn.relu(bn_fc2)
-    #
-    #     # activ4 = tf.nn.relu(tf.matmul(activ_fc1,weights4) + bias4 )
-    #     # tf.summary.histogram('fc2', activ4)
-
     with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE):
 
         w_out = _weighted_variable([1024, NUM_CLASS])
@@ -272,8 +178,6 @@ def cnn_network(input_x, mode):
         softmax = tf.nn.softmax(tf.matmul(activ_fc1, w_out) + b_out)
 
         # tf.summary.histogram('softmax', softmax)
-
-
     return softmax
 
 
@@ -314,12 +218,9 @@ def model_fn(features,labels, mode):
     logits_test = cnn_network(features, mode='test')
 
     predict_class = tf.argmax(logits_test, axis=1)
-    # predict_prob = tf.nn.softmax(logits_test)
 
     if mode == 'train':
         return logits_train, labels
-        # loss_op = loss(logits_train, labels)
-        # train_op = train(loss_op, learning_rate=learning_rate)
 
     if mode == 'test' or mode=='validation':
         accuracy_op = accuracy_fn(predict_class, labels)
@@ -348,17 +249,8 @@ def main(argv=None):
     # validate
     image_data_valid, label_valid = distorted_input(DATA_DIR, BATCH_SIZE, 'validation')
     accuracy_op = model_fn(image_data_valid, label_valid, 'test')
-    # accuracy_op = model_fn(image_data_train, label_train, 'validation')
-    # accuracy_op = accuracy_fn(predict_class, label_test)
 
     summaries = tf.summary.merge_all()
-
-    # keep moving mean,var for norm
-    # var_list = tf.trainable_variables()
-    # g_list = tf.global_variables()
-    # bn_moving_vars = [g for g in g_list if 'moving_mean' in g.name]
-    # bn_moving_vars += [g for g in g_list if 'moving_variance' in g.name]
-    # var_list += bn_moving_vars
 
     # saver = tf.train.Saver(var_list=var_list, max_to_keep=5)
     saver = tf.train.Saver()
@@ -385,20 +277,10 @@ def main(argv=None):
                 summ = sess.run(summaries)
                 writer.add_summary(summ, global_step=sess.run(global_step))
 
-                # print(sess.run(lossx), sess.run(lossy))
-                # with tf.variable_scope('layer2', reuse=True):
-                #     print(sess.run(tf.get_variable('weights')[0,0,0]))
-                    # print(sess.run(tf.get_variable('bias')[0]))
-
                 if count % 5 == 0:
                     print('step:', count, 'loss:',sess.run(loss_op))
-                        # print(sess.run(tf.shape(tf.get_variable('weights'))))
 
                 acc_value = sess.run(accuracy_op)
-                # if acc_value > 0.9:
-                #     high_count += 1
-                #     if high_count == 2:
-                #         break
 
                 if count%50 == 0:
                     top_k_value = sess.run(top_k)
@@ -457,15 +339,6 @@ def eval_fn(num):
         coord.request_stop()
         coord.join(threads)
 
-
-    # with open('a','w') as f:
-    #     c=0
-    #     for xx in label_1:
-    #         for j in xx:
-    #             c+=1
-    #             f.write(str(j)+', ')
-    #             if c%20==0:
-    #                 f.write('\n')
 
 if __name__ == '__main__':
     # main()

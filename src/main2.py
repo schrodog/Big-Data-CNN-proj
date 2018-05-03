@@ -137,6 +137,48 @@ def _activation(conv, bias, name='activation', norm=True, mode='train'):
         shift = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
         epsilon = 0.001
         mult_add = tf.nn.batch_normalization(mult_add, fc_mean, fc_var, shift, scale, epsilon)
+# mult_add = tf.add(conv,bias)
+# ema = tf.train.ExponentialMovingAverage(decay=0.5)
+#
+# mean_var = tf.Variable(tf.zeros( [bias.shape.as_list()[0]] ))
+# variance_var = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
+# # batch normalization
+# if norm:
+#     scale = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
+#     shift = tf.Variable(tf.ones( [bias.shape.as_list()[0]] ))
+#     epsilon = 0.001
+#
+#
+#     if fc:
+#         fc_mean, fc_var = tf.nn.moments(mult_add, axes=[0])
+#     else:
+#         fc_mean, fc_var = tf.nn.moments(mult_add, axes=[0,1,2])
+#
+#     # fc_mean, fc_var = tf.identity(fc_mean), tf.identity(fc_var)
+#
+#     # if mode == 'train' or mode == 'test':
+#     #     pass
+#     # else:
+#     #     ema_apply_op = ema.apply([fc_mean, fc_var])
+#     #     with tf.control_dependencies([ema_apply_op]):
+#     #         fc_mean, fc_var = tf.identity(fc_mean), tf.identity(fc_var)
+#     if mode=='train':
+#         # add value to variables
+#         assign_mean = mean_var.assign(fc_mean)
+#         assign_var = variance_var.assign(fc_var)
+#         ema_apply_op = ema.apply([mean_var, variance_var])
+#
+#         with tf.control_dependencies([assign_mean, assign_var]):
+#             # mult_add = tf.nn.batch_normalization(mult_add, fc_mean, fc_var, shift, scale, epsilon)
+#             mult_add = tf.nn.batch_norm_with_global_normalization(mult_add, fc_mean, fc_var, shift, scale, epsilon, True)
+#     else:
+#         # ema_apply_op = ema.apply([mean_var, variance_var])
+#         mean = ema.average(mean_var)
+#         variance = ema.average(variance_var)
+#         local_scale, local_shift = tf.identity(scale), tf.identity(shift)
+#         # mult_add = tf.nn.batch_normalization(mult_add, mean, variance, local_shift, local_scale, epsilon)
+#         mult_add = tf.nn.batch_norm_with_global_normalization(mult_add, mean, variance, local_shift, local_scale, epsilon, True)
+
 
     return tf.nn.relu(mult_add, name=name)
 
