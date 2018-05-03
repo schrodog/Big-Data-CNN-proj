@@ -327,8 +327,7 @@ def eval_fn(num):
         # eval stat
         top_k_value = sess.run(top_k)
         rmse_value = sess.run(rmse)[0]
-        total1 += top_k_value
-        total2 += rmse_value
+
         print(top_k_value, rmse_value)
         print(sess.run(confu_mat))
 
