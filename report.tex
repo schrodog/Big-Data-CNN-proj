@@ -1,5 +1,4 @@
-
-\documentclass[journal,onecolumn]{IEEEtran}
+\documentclass[journal,onecolumn, 12pt]{IEEEtran}
 
 % *** MISC UTILITY PACKAGES ***
 %\usepackage{ifpdf}
@@ -107,36 +106,8 @@ CNN, CIFAR-10, image classification
 
 
 
-
-
-% For peer review papers, you can put extra information on the cover
-% page as needed:
-% \ifCLASSOPTIONpeerreview
-% \begin{center} \bfseries EDICS Category: 3-BBND \end{center}
-% \fi
-%
-% For peerreview papers, this IEEEtran command inserts a page break and
-% creates the second title. It will be ignored for other modes.
-\IEEEpeerreviewmaketitle
-
-
-
 \section{Introduction}
-% The very first letter is a 2 line initial drop letter followed
-% by the rest of the first word in caps.
-%
-% form to use if the first word consists of a single letter:
-% \IEEEPARstart{A}{demo} file is ....
-%
-% form to use if you need the single drop letter followed by
-% normal text (unknown if ever used by the IEEE):
-% \IEEEPARstart{A}{}demo file is ....
-%
-% Some journals put the first two words in caps:
-% \IEEEPARstart{T}{his demo} file is ....
-%
-% Here we have the typical use of a "T" for an initial drop letter
-% and "HIS" in caps to complete the first word.
+
 \IEEEPARstart
 {I}{mage} classification is the central problem in Machine Learning. The task of image classification is to identify which class an image belongs to a given number of options.There are many algorithms which use different approaches for recognition and classification task. A good image recognizer has the ability to detect the smallest details including all salient features. Convolutional Neural Networks has currently outperform most of the previous machine learning approaches in scope of image classification and become the state of art performance on various image datasets. 
 
@@ -146,12 +117,6 @@ CIFAR is one of the several labeled image datasets that are publicly available t
 
 In this paper, we explore new CNN model with CIFAR-10 dataset. Methodology part will further elaborate the proposed network and implementation details, along with experiments to investigate impacts of parameters, finding the best combination. In last part we test performance using ROC curve, confusion matrix and simple test accuracy.
 
-
-% You must have at least 2 lines in the paragraph with the drop letter
-% (should never be an issue)
-
-% \hfill mds
-% \hfill August 26, 2015
 
 \section{Problem Definition}
 The objective of the project is to approximate the accuracy and the value of loss function in CNN image classification by trying different architectures of CNN and reach high classification performance. The following are some of the problems that we have to face throughout the project. 
@@ -198,7 +163,7 @@ We first created the network based on AlexNet architecture when defining the var
 \caption{CIFAR-10 sample image}
 \end{figure*}
 
-The CIFAR-10 dataset consists of 60,000 32×32 colour images in 10 classes, with 6,000 images per class. There are 50,000 training images and 10000 test images, that is the dataset is divided into five training batches and one test batch. We use all data for training and testing.
+The CIFAR-10 dataset consists of 60,000 32x32 colour images in 10 classes, with 6,000 images per class. There are 50,000 training images and 10000 test images, that is the dataset is divided into five training batches and one test batch. We use all data for training and testing.
 
 Before training the model with the dataset, images are preprocessed in three operations consecutively - randomly flip the image horizontally, randomly adjust the brightness and contrast. Image inputs are also standardized by formula (x-mean) / adjusted stddev, where stddev is standard deviation of 3 channels. Data standardization ensures that each input parameter has a similar data distribution and makes convergence faster while training the network. Rescaling is another way to normalize the images but standardization works better for images as they assume features to have a gaussian form. After all, the training data is randomly shuffled before feeding into model.
 
@@ -214,9 +179,9 @@ The common form of the layers stacks a CONV---BATCH NORMALIZATION---RELU layer, 
 
 
 \section{Experiments}
-To explore the full potential of simple CNN structure, we tested the network by assignment one hyper parameter as variable in each experiment set, other parameter are kept constant. We use all training data in Cifar10 for training model. The loss function is defined as sparse softmax cross  entropy between softmax outputs and labels. The numbers in tables below are computed from accuracy of cross validation training data. We stop running model after accuracy stop increasing.
+To explore the full potential of simple CNN structure, we tested the network by assignment one hyper parameter as variable in each experiment set, other parameters are kept constant. We use all training data in Cifar10 for training model. The loss function is defined as sparse softmax cross  entropy between softmax outputs and labels. The numbers in tables below are computed from accuracy of cross validation training data. We stop running model after accuracy stop increasing and loss stop decreasing.
 
-The experiments are split to 2 large groups, one is without batch normalization(BN), another with BN. Since BN is the major regularization operation in our model, we would like to see if existence of BN affects parameter adjustment. All tests carried out using single GeForce GTX 1080 Ti GPU, under Windows/Linux platform. 
+The experiments are split to 2 large groups, one is without batch normalization(BN), another with BN. Since BN is the major regularization operation in our model, it is meaningful to see if existence of BN affects parameter adjustment. All tests carried out using single GeForce GTX 1080 Ti GPU, under Windows/Linux platform. 
 
 \subsection{Changing Convolutional Kernel (without BN)}
 
@@ -266,9 +231,10 @@ Iteration & 32 & 64 & 128\\
   \hline
   {} & Pooling every layer & no pool after 1st layer & no pool after 2nd layer & no pool after 3rd layer \\
   \hline
-  5k & {} & 0.4 & 0.35 & 0.4 \\
-  10k & {} & 0.46 & 0.43 & 0.6 \\
-  15k & {} & {} & {} & 0.65 \\
+  5k & 0.60 & 0.51 & 0.58 & 0.58 \\
+  10k & 0.60 & 0.54 & 0.61 & 0.60 \\
+  15k & 0.66 & 0.58 & 0.63 & 0.63 \\
+  test accuracy & 0.61 & 0.54 & 0.61 & 0.56\\
   \hline
 \end{tabular}
 
@@ -277,7 +243,7 @@ Iteration & 32 & 64 & 128\\
   \hline
   Iteration & \multicolumn{5}{|c|}{3 convolution layer} & \multicolumn{1}{|c|}{4 convolution layer} \\
   \hline
-  {} & no BN after 1st layer & no BN after1st, 2nd layer & no BN after 3rd layer & all layers with batch norm & all layers without batch norm & all layers with batch norm\\
+  {} & no BN after 1st layer & no BN after 1st, 2nd layer & no BN after 3rd layer & all layers with BN & all layers without BN & all layers with BN\\
   \hline
   5k & 0.70 & 0.60 & 0.73 & 0.74 & 0.38 & 0.73\\
   10k & 0.75 & 0.62 & 0.77 & 0.82 & 0.48 & 0.8\\
@@ -315,6 +281,19 @@ Iteration & 32 & 64 & 128\\
   \hline
 \end{tabular}
 
+\subsection{Changing learning rate (with BN)}
+\begin{tabular}{*9c}
+  \hline
+  Iteration & 0.01 & 0.002 & 0.005 & 0.0005 \\
+  \hline
+  5k & 0.5 & 0.78   & 0.73 & 0.84\\
+  10k & 0.68 & 0.88 & 0.83 & 0.88 \\
+  15k & 0.71 & 0.91 & 0.85 & 0.92 \\
+  20k & 0.73 & 0.93 & 0.91 & 0.91 \\
+  test accuracy & 0.71 & 0.81 & 0.79 & 0.79 \\
+  \hline
+\end{tabular}
+
 
 \section{Analysis}
 \subsection{Convolution}
@@ -333,7 +312,7 @@ When we feed data to model, feature scaling is an important preprocessing step, 
 
 Batch normalization normalizes the activation of the previous layer at each batch. It uses mini-batch statistics. For all values of x over mini-batch $\{x_1, ... x_m\}$, it calculates mini-batch mean and variance, learns rescale and re-shift parameters. Batch normalization first normalize data to distribution of average 0, variance 1 for each feature, then rescale and reshift the output data. \cite{bn_paper} BN solves the gradient explosion and vanishing problem in back propagation, by eliminating the effect of weight scale. It significantly speeds up training, and the number of training steps is near constant. Without batch normalization the number of training steps increases with each subsequent layer.
 
-In our case, batch normalization acts as a regularizer and eliminates the need of using dropout.  Dropout is typically used to reduce overfitting but batch normalization fulfills some of the goals as dropout. Dropout did not show any impact on performance after using batch normalization. The training network no longer producing deterministics values for the training dataset. Our experiment results match with the findings from \cite{bn}. Without using batch normalization, the accuracy are significantly lower than that of those used batch normalization, no matter it is used in which layer. Batch normalization in all layers give the highest accuracy around 85\%, while batch normalization in one particular layer give around 82\%.
+In our case, batch normalization acts as a regularizer and eliminates the need of using dropout.  Dropout is typically used to reduce overfitting but batch normalization fulfills some of the goals as dropout. Dropout did not show any impact on performance after using batch normalization. The training network no longer producing deterministics values for the training dataset. Our experiment results match with the findings from \cite{bn}. Without using batch normalization, the accuracy are significantly lower than that of those used batch normalization, no matter it is used in which layer. Batch normalization in all layers give the highest accuracy around 80\%, while missing batch normalization in any layer reduce accuracy significantly.
 
 \subsection{Batch Size}
 We tested different batch size with and without batch normalization to see effect of batch size. 4 batch size values are selected {32,64,128,256}. 
@@ -342,14 +321,14 @@ In case without BN, higher batch size has slightly higher accuracy and faster co
 Although large batch size seems to provide better result, it is not always appropriate to use largest possible batch size. When batch size larger, though it increases data processing speed, it takes more time for each iteration, therefore to achieve same accuracy larger batch size may consume more time. However, when batch size too small, convergence is not stable. So we need to strike balance in batch size to get optimal time consumption. Our choice is batch size equals to 256.
 
 \subsection{Learning rate}
-When learning rate too high, convergence curve tends to be unstable, loss value easily explode. When learning rate too slow, model easily overfit training data, and converge very slowly. Inappropriate learning rate will let model converge to local minima with zero gradient. To avoid the issue, we start from higher learning rate to gain convergence speed, and then gradually decrease learning rate to stabilize curve. Result shows initial learning rate 0.002 is best learning rate for convergence. To enhance convergence, we add decay factor and decay epoch to gradually decrease learning rate with increasing epoch.
+When learning rate too high, convergence curve tends to be unstable, loss value easily explode. When learning rate too slow, model easily overfit training data, and converge very slowly. Inappropriate learning rate will let model converge to local minima with zero gradient. To avoid the issue, we start from higher learning rate to gain convergence speed, and then gradually decrease learning rate to stabilize curve. Result shows under 3 convolution layers with BN, initial learning rate 0.002 is best learning rate for convergence. To enhance convergence, we add decay factor and decay epoch to gradually decrease learning rate with increasing epoch.
 
 \section{Performance}
-After list of experiments on tuning parameter, we finalized the model as stated in methodology part and evaluate performance in depth. The model is evaluated with top1 accuracy, RMSE and confusion matrix. The best model is evaluated 5 times to take average values. The model is evaluated under learning rate 0.002, learning rate decay epoch 8000, learning rate decay factor 0.96, batch size 256.
+After list of experiments on tuning parameter, we finalized the model as stated in methodology part and evaluate performance in depth. The model is evaluated with top1 accuracy, RMSE and confusion matrix. The best model is evaluated 3 times to take average values. The model is evaluated under learning rate 0.002, learning rate decay epoch 8000, learning rate decay factor 0.96, batch size 256. The result is obtained after 25k iterations, around 35 mins.
 
 The top-1 test accuracy of model is 82\%, root mean square error is 3.0491. 
 
-Since the overall accuracy cannot reveal the model’s individual performances on each class, to further analyse this, confusion matrix and f1 score are calculated as below.
+Since the overall accuracy cannot reveal the model’s individual performances on each class, to further analyse this, confusion matrix and f score are calculated as below.
 
 \[
 \textrm{Confusion matrix} =
@@ -385,17 +364,17 @@ Since the overall accuracy cannot reveal the model’s individual performances o
 \end{figure*}
 
 \begin{figure*}[!t]
-\includegraphics[width=0.6\paperwidth]{images/mcc}
+\includegraphics[width=0.4\paperwidth]{images/mcc}
 \caption{Matthew Correlation Coefficient}
 \end{figure*}
 
 \begin{figure*}[!t]
-\includegraphics[width=0.6\paperwidth]{images/roc}
+\includegraphics[width=0.4\paperwidth]{images/roc}
 \caption{ROC curve}
 \end{figure*}
 
 
-We observe that the overall precision of classes are among 60-90\%, on average around 80\%. The most difficult class to classify is cat, second difficult one is dog. F-score is weighted average of precision and recall rate. Using F-score, the best classified class is automobile. ROC curve and Matthew Correlation Coefficient (MCC) also show the same results. More than half of classes has higher than 80\% of precision of F-score, the model proven to give reasonable result.
+We observe that the overall precision of classes are among 60-90\%, on average around 80\%. The most difficult class to classify is cat, second difficult one is dog. F-score is weighted average of precision and recall rate. Using F-score, the best classified class is automobile. ROC curve and Matthew Correlation Coefficient (MCC) also show the same results. From confusion matrix, we can see that diagonal matrix values are much larger than others, implying that model is quite robust not only finding correct classification, but also exclude wrong classification to avoid false positive and false negative. Overall the performance among classes do not differ a lot, more than half of classes has higher than 80\% of precision of F-score, the model proven to give reasonable result.
 
 Comparing to our baseline model Alexnet, from various implements of Alexnet over dataset Cifar10, the test accuracies are ranging from 76-82\%. \cite{alex1, alex2} Our model’s accuracy is comparable to Alexnet with less layers. We also made two modifications, using batch normalization to replace dropout layer in Alexnet, use decaying learning rate to replace static learning rate, and smaller number of neurons involved.
 
@@ -416,7 +395,7 @@ The results in this paper suggest that simple CNN network structure is a promisi
 
 The report is the collaborative effort of group members, with their contributions listed below.\\
 
-\begin{tabular}{l l}
+\begin{tabular}{l p{13.5cm}}
   \hline
   LEE Tak Chun & Report - Introduction, Problem Definition \\ 
   {} & Code - Provide the information for the different combinations of the model\\
@@ -432,29 +411,11 @@ The report is the collaborative effort of group members, with their contribution
 \end{tabular}
 
 
-
-
-\ifCLASSOPTIONcaptionsoff
-  \newpage
-\fi
-
-
-% trigger a \newpage just before the given reference
-% number - used to balance the columns on the last page
-% adjust value as needed - may need to be readjusted if
-% the document is modified later
-%\IEEEtriggeratref{8}
-% The "triggered" command can be changed if desired:
-%\IEEEtriggercmd{\enlargethispage{-5in}}
-
 \bibliographystyle{IEEEtran}
 \bibliography{IEEEabrv,../bib/paper}
 
 \begin{thebibliography}{9}
 
-% \bibitem{IEEEhowto:kopka}
-% H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
-%   0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
 
 \bibitem{bn} 
 S.~Loffe, C.~Szegedy \emph{Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift} \hskip 1em\relax Available at: \url{https://arxiv.org/pdf/1502.03167.pdf} [Accessed on 1 May 2018] 2015

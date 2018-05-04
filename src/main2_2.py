@@ -124,17 +124,12 @@ def _activation(mult_add, name='activation', norm=False, mode='train', fc=False)
 
 def cnn_network(input_x, mode):
 
-    if mode == 'train': #or mode=='validation':
-        bn_training = True
-    else:
-        bn_training = True
-
     with tf.variable_scope("layer1", reuse=tf.AUTO_REUSE):
         filters1 = _weighted_variable([3,3,3,64])
         conv1 = _conv2d(input_x, filters1, [1,1,1,1])
         bias1 = _bias_variable([64])
         # bn1 =
-        bn1 = tf.layers.batch_normalization(conv1+bias1, momentum=0.9, training=bn_training)
+        bn1 = tf.layers.batch_normalization(conv1+bias1, momentum=0.9, training=True)
         activ1 = _activation(bn1, mode=mode)
         # activ1 = _activation(conv1+bias1, mode=mode)
 
@@ -145,7 +140,7 @@ def cnn_network(input_x, mode):
         conv2 = _conv2d(pool1, filters2, [1,1,1,1])
         bias2 = _bias_variable([64])
 
-        bn2 = tf.layers.batch_normalization(conv2+bias2, momentum=0.9, training=bn_training)
+        bn2 = tf.layers.batch_normalization(conv2+bias2, momentum=0.9, training=True)
         activ2 = _activation(bn2, norm=False, mode=mode)
         # activ2 = _activation(conv2+bias2, norm=False, mode=mode)
 
@@ -156,7 +151,7 @@ def cnn_network(input_x, mode):
         conv3 = _conv2d(pool2, filters3, [1,1,1,1])
         bias3 = _bias_variable([64])
 
-        bn3 = tf.layers.batch_normalization(conv3+bias3, momentum=0.9, training=bn_training)
+        bn3 = tf.layers.batch_normalization(conv3+bias3, momentum=0.9, training=True)
         activ3 = _activation(bn3, mode=mode)
         # activ3 = _activation(conv3+bias3, mode=mode)
         pool3 = _pool(activ3, ksize=[1,3,3,1], strides=[1,2,2,1])
@@ -168,7 +163,7 @@ def cnn_network(input_x, mode):
         w_fc1 = _weighted_variable([n*n*m, 1024])
         b_fc1 = _bias_variable([1024])
 
-        bn_fc1 = tf.layers.batch_normalization(tf.matmul(reshape, w_fc1) + b_fc1, momentum=0.9, training=bn_training)
+        bn_fc1 = tf.layers.batch_normalization(tf.matmul(reshape, w_fc1) + b_fc1, momentum=0.9, training=True)
         activ_fc1 = tf.nn.relu(bn_fc1)
 
     with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE):
@@ -328,7 +323,8 @@ def eval_fn(num):
         top_k_value = sess.run(top_k)
         rmse_value = sess.run(rmse)[0]
 
-        print(top_k_value, rmse_value)
+        print('accuracy',top_k_value)
+        print('rmse',rmse_value)
         print(sess.run(confu_mat))
 
         benchmark.f1_score(sess.run(confu_mat))
