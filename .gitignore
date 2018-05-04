@@ -3,3 +3,5 @@ src/tmp.py
 src/logs
 src/__pycache__
 model/*
+build
+
