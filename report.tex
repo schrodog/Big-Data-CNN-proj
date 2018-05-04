@@ -19,28 +19,12 @@
 % have to be run twice to clear warning/error messages.
 
 % *** CITATION PACKAGES ***
-%\usepackage{cite}
+\usepackage{cite}
 
-
-% *** GRAPHICS RELATED PACKAGES ***
-\ifCLASSINFOpdf
-  \usepackage[pdftex]{graphicx}
-  % declare the path(s) where your graphic files are
-  \graphicspath{{./images/}
-  % and their extensions so you won't have to specify these with
-  % every instance of \includegraphics
-  \DeclareGraphicsExtensions{.pdf,.jpeg,.png}
-\else
-  % or other class option (dvipsone, dvipdf, if not using dvips). graphicx
-  % will default to the driver specified in the system graphics.cfg if no
-  % driver is specified.
-  % \usepackage[dvips]{graphicx}
-  % declare the path(s) where your graphic files are
-  % \graphicspath{{../eps/}}
-  % and their extensions so you won't have to specify these with
-  % every instance of \includegraphics
-  % \DeclareGraphicsExtensions{.eps}
-\fi
+\usepackage[pdftex]{graphicx}
+\DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+% \graphicspath{{./images/}
+  
 
 \usepackage{amsmath}
 %\usepackage{algorithmic}
@@ -70,7 +54,7 @@
 % \renewcommand{\subfloat}[2][\relax]{\MYorigsubfloat[]{#2}}
 
 % *** PDF, URL AND HYPERLINK PACKAGES ***
-%\usepackage{url}
+\usepackage{url}
 % Basically, \url{my_url_here}.
 
 % correct bad hyphenation here
@@ -184,7 +168,7 @@ Can the performance of the image classification performance be improved by tunin
 How is the CNN performance affected by changing its architecture (e.g. the number of layers)?
 
 \section{Methodology}
-We consider and reference TWO famous Models, LeNet and AlexNet in our project. LeNet is one of the very first convolutional neural networks, and what propelled the field of Deep Learning. Alexnet is a Deep Convolutional Neural Network for image classification that won the ILSVRC-2012 competition and achieved a winning top-5 test error rate of 15.3%. 
+We consider and reference TWO famous Models, LeNet and AlexNet in our project. LeNet is one of the very first convolutional neural networks, and what propelled the field of Deep Learning. Alexnet is a Deep Convolutional Neural Network for image classification that won the ILSVRC-2012 competition and achieved a winning top-5 test error rate of 15.3\%. 
 
 \subsection{Previous works}
 \subsubsection{LeNet Architecture (1998)}
@@ -232,7 +216,7 @@ The common form of the layers stacks a CONV---BATCH NORMALIZATION---RELU layer, 
 \section{Experiments}
 To explore the full potential of simple CNN structure, we tested the network by assignment one hyper parameter as variable in each experiment set, other parameter are kept constant. We use all training data in Cifar10 for training model. The loss function is defined as sparse softmax cross  entropy between softmax outputs and labels. The numbers in tables below are computed from accuracy of cross validation training data. We stop running model after accuracy stop increasing.
 
-The experiments are split to 2 huge groups, one is without batch normalization(BN), another with BN. Since BN is the major regularization operation in our model, we would like to see if existence of BN affects parameter adjustment. All tests carried out using single GeForce GTX 1080 Ti GPU, under Windows/Linux platform. 
+The experiments are split to 2 large groups, one is without batch normalization(BN), another with BN. Since BN is the major regularization operation in our model, we would like to see if existence of BN affects parameter adjustment. All tests carried out using single GeForce GTX 1080 Ti GPU, under Windows/Linux platform. 
 
 \subsection{Changing Convolutional Kernel (without BN)}
 
@@ -278,9 +262,9 @@ Iteration & 32 & 64 & 128\\
 \subsection{Pooling In Different Layers(without BN)}
 \begin{tabular}{*5{p{2cm}}}
   \hline
-  {} & \multicolumn{4}{c}{3 convolution layer} \\
+  Iteration & \multicolumn{4}{c}{3 convolution layer} \\
   \hline
-  Iteration & Pooling every layer & no pool after 1st layer & no pool after 2nd layer & no pool after 3rd layer \\
+  {} & Pooling every layer & no pool after 1st layer & no pool after 2nd layer & no pool after 3rd layer \\
   \hline
   5k & {} & 0.4 & 0.35 & 0.4 \\
   10k & {} & 0.46 & 0.43 & 0.6 \\
@@ -345,11 +329,11 @@ Result shows model with more pooling layers perform better than less pooling, wi
 
 
 \subsection{Batch Normalization \& Dropout}
-When we feed data to model, feature scaling is an important preprocessing step, for i) reduce dependencies among features, ii) equalize average and variance for each feature. Since deep learning network has many layers stack together, distribution of each layer’s inputs changes when parameter of previous layer changes. This violates the assumption that source domain has the same distribution as target domain in statistical machine learning. We can refer this effect as Internal Covariate Shift (ICS). [4]
+When we feed data to model, feature scaling is an important preprocessing step, for i) reduce dependencies among features, ii) equalize average and variance for each feature. Since deep learning network has many layers stack together, distribution of each layer’s inputs changes when parameter of previous layer changes. This violates the assumption that source domain has the same distribution as target domain in statistical machine learning. We can refer this effect as Internal Covariate Shift (ICS). \cite{bn_paper}
 
-Batch normalization normalizes the activation of the previous layer at each batch. It uses mini-batch statistics. For all values of x over mini-batch {x1, … m}, it calculates mini-batch mean and variance, learns rescale and re-shift parameters. Batch normalization first normalize data to distribution of average 0, variance 1 for each feature, then rescale and reshift the output data. [4] BN solves the gradient explosion and vanishing problem in back propagation, by eliminating the effect of weight scale. It significantly speeds up training, and the number of training steps is near constant. Without batch normalization the number of training steps increases with each subsequent layer.
+Batch normalization normalizes the activation of the previous layer at each batch. It uses mini-batch statistics. For all values of x over mini-batch $\{x_1, ... x_m\}$, it calculates mini-batch mean and variance, learns rescale and re-shift parameters. Batch normalization first normalize data to distribution of average 0, variance 1 for each feature, then rescale and reshift the output data. \cite{bn_paper} BN solves the gradient explosion and vanishing problem in back propagation, by eliminating the effect of weight scale. It significantly speeds up training, and the number of training steps is near constant. Without batch normalization the number of training steps increases with each subsequent layer.
 
-In our case, batch normalization acts as a regularizer and eliminates the need of using dropout.  Dropout is typically used to reduce overfitting but batch normalization fulfills some of the goals as dropout. Dropout did not show any impact on performance after using batch normalization. The training network no longer producing deterministics values for the training dataset. Our experiment results match with the findings from S. Loffe, C. Szegedy (2015). Without using batch normalization, the accuracy are significantly lower than that of those used batch normalization, no matter it is used in which layer. Batch normalization in all layers give the highest accuracy around 85\%, while batch normalization in one particular layer give around 82\%.
+In our case, batch normalization acts as a regularizer and eliminates the need of using dropout.  Dropout is typically used to reduce overfitting but batch normalization fulfills some of the goals as dropout. Dropout did not show any impact on performance after using batch normalization. The training network no longer producing deterministics values for the training dataset. Our experiment results match with the findings from \cite{bn}. Without using batch normalization, the accuracy are significantly lower than that of those used batch normalization, no matter it is used in which layer. Batch normalization in all layers give the highest accuracy around 85\%, while batch normalization in one particular layer give around 82\%.
 
 \subsection{Batch Size}
 We tested different batch size with and without batch normalization to see effect of batch size. 4 batch size values are selected {32,64,128,256}. 
@@ -413,7 +397,7 @@ Since the overall accuracy cannot reveal the model’s individual performances o
 
 We observe that the overall precision of classes are among 60-90\%, on average around 80\%. The most difficult class to classify is cat, second difficult one is dog. F-score is weighted average of precision and recall rate. Using F-score, the best classified class is automobile. ROC curve and Matthew Correlation Coefficient (MCC) also show the same results. More than half of classes has higher than 80\% of precision of F-score, the model proven to give reasonable result.
 
-Comparing to our baseline model Alexnet, from various implements of Alexnet over dataset Cifar10, the test accuracies are ranging from 76-82\%. [5,6] Our model’s accuracy is comparable to Alexnet with less layers. We also made two modifications, using batch normalization to replace dropout layer in Alexnet, use decaying learning rate to replace static learning rate, and smaller number of neurons involved.
+Comparing to our baseline model Alexnet, from various implements of Alexnet over dataset Cifar10, the test accuracies are ranging from 76-82\%. \cite{alex1, alex2} Our model’s accuracy is comparable to Alexnet with less layers. We also made two modifications, using batch normalization to replace dropout layer in Alexnet, use decaying learning rate to replace static learning rate, and smaller number of neurons involved.
 
 
 \section{Conclusion}
@@ -422,45 +406,37 @@ The results in this paper suggest that simple CNN network structure is a promisi
 
 
 
-
-% if have a single appendix:
-%\appendix[Proof of the Zonklar Equations]
-% or
-%\appendix  % for no appendix heading
-% do not use \section anymore after \appendix, only \section*
-% is possibly needed
-
-% use appendices with more than one appendix
-% then use \section to start each appendix
-% you must declare a \section before using any
-% \subsection or using \label (\appendices by itself
-% starts a section numbered zero.)
-%
+% \appendices
+% \section{Proof of the First Zonklar Equation}
+% Appendix one text goes here.
 
 
-\appendices
-\section{Proof of the First Zonklar Equation}
-Appendix one text goes here.
-
-% you can choose not to have a title for an appendix
-% if you want by leaving the argument blank
-\section{}
-Appendix two text goes here.
-
-
-% use section* for acknowledgment
 \section*{Acknowledgment}
 
 
-The authors would like to thank...
+The report is the collaborative effort of group members, with their contributions listed below.\\
+
+\begin{tabular}{l l}
+  \hline
+  LEE Tak Chun & Report - Introduction, Problem Definition \\ 
+  {} & Code - Provide the information for the different combinations of the model\\
+  AU Tsz Man & Report - Abstract, Introduction, Problem Definition, Methodology, Analysis \\ 
+  {} & Code - participate in creating the basis of the model\\
+  LAI Chun Leung & Report - Experiment \\ 
+  {} & Code - Try different combinations of the model, train and test the model\\
+  LEE Chun Kit Edwin & Report - Methodology, Experiment, Analysis, Conclusion \\ 
+  {} & Code - Creating the basis of the model, Try different combinations of the model, train and test the model\\
+  CHEUNG Yuen Ting & Report - Abstract, Introduction, Problem Definition, Methodology \\ 
+  {} & Code - Test different kinds of Image Preprocessing\\
+  \hline
+\end{tabular}
 
 
-% Can use something like this to put references on a page
-% by themselves when using endfloat and the captionsoff option.
+
+
 \ifCLASSOPTIONcaptionsoff
   \newpage
 \fi
-
 
 
 % trigger a \newpage just before the given reference
@@ -471,71 +447,35 @@ The authors would like to thank...
 % The "triggered" command can be changed if desired:
 %\IEEEtriggercmd{\enlargethispage{-5in}}
 
-% references section
+\bibliographystyle{IEEEtran}
+\bibliography{IEEEabrv,../bib/paper}
 
-% can use a bibliography generated by BibTeX as a .bbl file
-% BibTeX documentation can be easily obtained at:
-% http://mirror.ctan.org/biblio/bibtex/contrib/doc/
-% The IEEEtran BibTeX style support page is at:
-% http://www.michaelshell.org/tex/ieeetran/bibtex/
-%\bibliographystyle{IEEEtran}
-% argument is your BibTeX string definitions and bibliography database(s)
-%\bibliography{IEEEabrv,../bib/paper}
-%
-% <OR> manually copy in the resultant .bbl file
-% set second argument of \begin to the number of references
-% (used to reserve space for the reference number labels box)
-\begin{thebibliography}{1}
+\begin{thebibliography}{9}
 
-\bibitem{IEEEhowto:kopka}
-H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
-  0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
+% \bibitem{IEEEhowto:kopka}
+% H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
+%   0.5em minus 0.4em\relax Harlow, England: Addison-Wesley, 1999.
+
+\bibitem{bn} 
+S.~Loffe, C.~Szegedy \emph{Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift} \hskip 1em\relax Available at: \url{https://arxiv.org/pdf/1502.03167.pdf} [Accessed on 1 May 2018] 2015
+
+\bibitem{dl_tutorial} Adrian Rosebrock \emph{Deep Learning, Tutorials}. Available at: https://www.pyimagesearch.com/2016/08/01/lenet-convolutional-neural-network-in-python/ [Accessed on 29 Apr 2018] 2016
+
+\bibitem{history_nn} EUGENIO CULURCIELLO \emph{THE HISTORY OF NEURAL NETWORKS}. Available at: http://dataconomy.com/2017/04/history-neural-networks/ 2017
+
+\bibitem{bn_paper} Sergey Ioffe and Christian Szegedy. \emph{Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift} 2015
+
+\bibitem{alex1}
+\emph{Alex’s CIFAR-10 tutorial in Mocha} Available at: http://mochajl.readthedocs.io/en/latest/tutorial/cifar10.html
+
+\bibitem{alex2}
+\emph{Train AlexNet over CIFAR-10} Available at:  https://gist.github.com/nudles/889730b6de7bd3ccac417e125686db69
 
 \end{thebibliography}
 
-% biography section
-%
-% If you have an EPS/PDF photo (graphicx package needed) extra braces are
-% needed around the contents of the optional argument to biography to prevent
-% the LaTeX parser from getting confused when it sees the complicated
-% \includegraphics command within an optional argument. (You could create
-% your own custom macro containing the \includegraphics command to make things
-% simpler here.)
-%\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{mshell}}]{Michael Shell}
-% or if you just want to reserve a space for a photo:
-
-\begin{IEEEbiography}{Michael Shell}
-Biography text here.
-\end{IEEEbiography}
-
-% if you will not have a photo at all:
-\begin{IEEEbiographynophoto}{John Doe}
-Biography text here.
-\end{IEEEbiographynophoto}
-
-% insert where needed to balance the two columns on the last page with
-% biographies
-%\newpage
-
-\begin{IEEEbiographynophoto}{Jane Doe}
-Biography text here.
-\end{IEEEbiographynophoto}
-
-% You can push biographies down or up by placing
-% a \vfill before or after them. The appropriate
-% use of \vfill depends on what kind of text is
-% on the last page and whether or not the columns
-% are being equalized.
-
-%\vfill
-
-% Can be used to pull up biographies so that the bottom of the last one
-% is flush with the other column.
-%\enlargethispage{-5in}
 
 
 
-% that's all folks
 \end{document}
 
 
